@@ -390,83 +390,144 @@ Do not claim to perform actions you cannot actually perform.
 
   // ---------- VOICE INPUT ----------
 
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+// ---------- WEDNESDAY WAKE WORD ----------
 
-  if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
 
-    recognition.continuous = false;
-    recognition.interimResults = false;
+let wakeEnabled = false;
+let awaitingCommand = false;
+let restarting = false;
 
-    function updateRecognitionLanguage() {
-      recognition.lang =
-        languageSelect.value === "auto"
-          ? "en-IN"
-          : languageSelect.value;
-    }
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
 
-    updateRecognitionLanguage();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 3;
 
-    languageSelect.addEventListener("change", updateRecognitionLanguage);
-
-    recognition.onstart = () => {
-      listening = true;
-      micButton.textContent = "🔴 Listening...";
-      micButton.classList.add("wd-listening");
-      setStatus("Listening to you...", "#dc2626");
-    };
-
-    recognition.onresult = event => {
-      const transcript = event.results[0][0].transcript;
-
-      input.value = transcript;
-      sendMessage(transcript);
-    };
-
-    recognition.onerror = event => {
-      setStatus("Microphone error: " + event.error, "#dc2626");
-    };
-
-    recognition.onend = () => {
-      listening = false;
-      micButton.textContent = "🎙 Speak";
-      micButton.classList.remove("wd-listening");
-
-      if (!status.textContent.includes("thinking")) {
-        setStatus("● Wednesday is ready", "#16a34a");
-      }
-    };
-
-    micButton.addEventListener("click", () => {
-      if (listening) {
-        recognition.stop();
-        return;
-      }
-
-      window.speechSynthesis?.cancel();
-
-      updateRecognitionLanguage();
-
-      try {
-        recognition.start();
-      } catch (error) {
-        console.error(error);
-        setStatus("Could not start microphone. Try again.", "#dc2626");
-      }
-    });
-
-  } else {
-    micButton.disabled = true;
-    micButton.textContent = "Microphone unsupported";
-
-    setStatus(
-      "Use Chrome or Edge for voice recognition.",
-      "#d97706"
-    );
+  function updateRecognitionLanguage() {
+    recognition.lang =
+      languageSelect.value === "hi-IN"
+        ? "hi-IN"
+        : "en-IN";
   }
 
+  languageSelect.addEventListener(
+    "change",
+    updateRecognitionLanguage
+  );
+
+  recognition.onstart = () => {
+    listening = true;
+    restarting = false;
+    micButton.textContent = "🔴 Wake word ON";
+    micButton.classList.add("wd-listening");
+    setStatus("Listening for 'Wednesday'...", "#16a34a");
+  };
+
+  recognition.onresult = event => {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (!event.results[i].isFinal) continue;
+
+      const transcript = event.results[i][0].transcript.trim();
+
+      const wakePattern = /\b(?:hey\s+)?wednesday\b/i;
+
+      if (!awaitingCommand) {
+        const match = transcript.match(wakePattern);
+
+        if (!match) continue;
+
+        const command = transcript
+          .slice(match.index + match[0].length)
+          .replace(/^[\s,!.?]+/, "")
+          .trim();
+
+        if (command) {
+          awaitingCommand = false;
+          sendMessage(command);
+        } else {
+          awaitingCommand = true;
+          setStatus("Wednesday activated! Listening for your command...", "#16a34a");
+        }
+      } else {
+        awaitingCommand = false;
+        sendMessage(transcript);
+      }
+    }
+  };
+
+  recognition.onerror = event => {
+    console.error("Wake word error:", event.error);
+
+    if (event.error === "not-allowed" ||
+        event.error === "service-not-allowed") {
+      wakeEnabled = false;
+      setStatus("Microphone permission denied.", "#dc2626");
+    } else if (event.error !== "no-speech" &&
+               event.error !== "aborted") {
+      setStatus("Voice recognition error: " + event.error, "#dc2626");
+    }
+  };
+
+  recognition.onend = () => {
+    listening = false;
+
+    if (wakeEnabled && !restarting) {
+      restarting = true;
+
+      setTimeout(() => {
+        if (!wakeEnabled) return;
+
+        try {
+          updateRecognitionLanguage();
+          recognition.start();
+        } catch (error) {
+          console.log("Recognition restarting...", error);
+        }
+      }, 700);
+    } else if (!wakeEnabled) {
+      micButton.textContent = "🎙 Enable Wake Word";
+      micButton.classList.remove("wd-listening");
+      setStatus("Wake word is OFF.", "#d97706");
+    }
+  };
+
+  micButton.textContent = "🎙 Enable Wake Word";
+
+  micButton.addEventListener("click", () => {
+    if (wakeEnabled) {
+      wakeEnabled = false;
+      awaitingCommand = false;
+
+      try {
+        recognition.stop();
+      } catch (error) {}
+
+      micButton.textContent = "🎙 Enable Wake Word";
+      micButton.classList.remove("wd-listening");
+      setStatus("Wake word is OFF.", "#d97706");
+      return;
+    }
+
+    wakeEnabled = true;
+    updateRecognitionLanguage();
+
+    try {
+      recognition.start();
+    } catch (error) {
+      wakeEnabled = false;
+      setStatus("Could not start microphone. Try again.", "#dc2626");
+    }
+  });
+
+} else {
+  micButton.disabled = true;
+  micButton.textContent = "Voice unsupported";
+  setStatus("Please use Chrome or Edge for voice recognition.", "#d97706");
+}
   // ---------- TEST AND STOP BUTTONS ----------
 
   document.getElementById("wd-test").addEventListener("click", () => {
