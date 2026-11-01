@@ -1,0 +1,10 @@
+{
+  "name": "WEDNESDAY Personal AI Assistant",
+  "short_name": "WEDNESDAY",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d111b",
+  "theme_color": "#101522",
+  "description": "A human-controlled personal and business AI command center.",
+  "icons": []
+}
