@@ -14,6 +14,17 @@
   let recording = false;
   let busy = false;
   let preferredVoice = null;
+  let activeUtterance = null;
+
+  // -----------------------------------
+  // CHARACTER STATE CONTROL
+  // -----------------------------------
+
+  function setCharacterState(state) {
+    if (typeof window.WEDNESDAY_SET_STATE === "function") {
+      window.WEDNESDAY_SET_STATE(state);
+    }
+  }
 
   // -----------------------------------
   // STATUS DISPLAY
@@ -37,6 +48,16 @@
           : "Start voice input"
       );
     }
+
+    const characterStates = {
+      recording: "listening",
+      busy: "thinking",
+      ready: "idle",
+      idle: "idle",
+      error: "error"
+    };
+
+    setCharacterState(characterStates[state] || "idle");
   }
 
   function getErrorMessage(error) {
@@ -62,33 +83,20 @@
   function cleanForSpeech(text) {
     let clean = String(text || "");
 
-    // Do not read programming code aloud.
     clean = clean.replace(/```[\s\S]*?```/g, " ");
-
-    // Keep the words inside inline code.
     clean = clean.replace(/`([^`]+)`/g, "$1");
-
-    // Keep image descriptions, not image URLs.
     clean = clean.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1");
-
-    // Keep link names, remove link addresses.
     clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-
-    // Remove raw web addresses.
     clean = clean.replace(/https?:\/\/\S+/gi, " ");
 
-    // Remove Markdown headings and formatting.
     clean = clean.replace(/^#{1,6}\s*/gm, "");
     clean = clean.replace(/^\s*[-*+]\s+/gm, "");
     clean = clean.replace(/^\s*\d+[.)]\s+/gm, "");
     clean = clean.replace(/^\s*>\s?/gm, "");
     clean = clean.replace(/[*_~]{1,3}/g, "");
     clean = clean.replace(/[*#`]/g, "");
-
-    // Remove HTML tags.
     clean = clean.replace(/<[^>]*>/g, " ");
 
-    // Decode common HTML entities.
     clean = clean
       .replace(/&nbsp;/gi, " ")
       .replace(/&amp;/gi, " and ")
@@ -97,13 +105,11 @@
       .replace(/&quot;/gi, "")
       .replace(/&#39;/gi, "");
 
-    // Make common symbols sound natural.
     clean = clean
       .replace(/₹\s*(\d+(?:,\d+)*(?:\.\d+)?)/g, "$1 rupees")
       .replace(/(\d+(?:\.\d+)?)%/g, "$1 percent")
       .replace(/&/g, " and ");
 
-    // Remove decorative symbols and repeated punctuation.
     clean = clean.replace(/[ \t]+/g, " ");
     clean = clean.replace(/\n{2,}/g, ". ");
     clean = clean.replace(/\s+([,.!?;:])/g, "$1");
@@ -158,16 +164,21 @@
   window.WEDNESDAY_SPEAK = function (text) {
     if (!("speechSynthesis" in window) || !text) return;
 
-    // Stop previous speech.
+    // Prevent an older utterance from changing the new state.
+    activeUtterance = null;
     window.speechSynthesis.cancel();
 
     const cleanText = cleanForSpeech(text);
 
-    if (!cleanText) return;
+    if (!cleanText) {
+      setCharacterState("idle");
+      return;
+    }
 
     chooseVoice(cleanText);
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
+    activeUtterance = utterance;
 
     if (preferredVoice) {
       utterance.voice = preferredVoice;
@@ -178,34 +189,40 @@
         : "en-IN";
     }
 
-   
-// Natural speaking settings.
-utterance.rate = 0.96;
-utterance.pitch = 1.0;
-utterance.volume = 1.0;
+    utterance.rate = 0.96;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
 
-// Character animation: start speaking.
-utterance.onstart = () => {
-  if (typeof window.WEDNESDAY_SET_STATE === "function") {
-    window.WEDNESDAY_SET_STATE("speaking");
-  }
-};
+    utterance.onstart = () => {
+      if (activeUtterance === utterance) {
+        setCharacterState("speaking");
+      }
+    };
 
-// Character animation: return to idle after speaking.
-utterance.onend = () => {
-  if (typeof window.WEDNESDAY_SET_STATE === "function") {
-    window.WEDNESDAY_SET_STATE("idle");
-  }
-};
+    utterance.onend = () => {
+      if (activeUtterance === utterance) {
+        activeUtterance = null;
+        setCharacterState("idle");
+      }
+    };
 
-utterance.onerror = () => {
-  if (typeof window.WEDNESDAY_SET_STATE === "function") {
-    window.WEDNESDAY_SET_STATE("error");
-  }
-};
+    utterance.onerror = (event) => {
+      if (activeUtterance !== utterance) return;
 
-window.speechSynthesis.speak(utterance);
-};
+      activeUtterance = null;
+
+      if (
+        event.error === "interrupted" ||
+        event.error === "canceled"
+      ) {
+        setCharacterState("idle");
+      } else {
+        setCharacterState("error");
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   // -----------------------------------
   // MICROPHONE CONTROLS
@@ -367,7 +384,6 @@ window.speechSynthesis.speak(utterance);
         throw new Error("No audio was recorded. Please try again.");
       }
 
-      // FastAPI expects the multipart field to be named "file".
       const form = new FormData();
 
       form.append(
@@ -420,6 +436,7 @@ window.speechSynthesis.speak(utterance);
       );
 
       // Send recognised words to WEDNESDAY.
+      // The chat submit handler will switch the character to thinking.
       chatForm.requestSubmit();
 
     } catch (error) {
