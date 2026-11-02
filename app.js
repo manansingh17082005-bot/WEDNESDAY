@@ -8,22 +8,6 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 let paused = true;
-
-const OLLAMA_URL = "http://localhost:11434/api/chat";
-const OLLAMA_MODEL = "llama3.2";
-
-let chatHistory = [];
-
-const WEDNESDAY_SYSTEM_PROMPT = `
-You are WEDNESDAY, a smart personal AI assistant.
-You communicate naturally in English, Hindi and Hinglish.
-You are helpful, professional, fast and concise.
-Remember the conversation during the current session.
-Never claim you have completed an action unless it actually happened.
-Always ask for approval before sending messages or performing
-important external actions.
-`;
-
 let clients = [];
 
 let tasks = [
