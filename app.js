@@ -121,6 +121,28 @@ function renderClients() {
 const OLLAMA_URL = "http://localhost:11434/api/chat";
 const OLLAMA_MODEL = "llama3.2";
 const conversationHistory = [];
+
+function setWednesdayCharacterState(state) {
+  const stage = document.getElementById("wednesday-stage");
+
+  if (!stage) return;
+
+  const allowedStates = [
+    "idle",
+    "listening",
+    "thinking",
+    "speaking",
+    "happy",
+    "error"
+  ];
+
+  stage.dataset.state = allowedStates.includes(state)
+    ? state
+    : "idle";
+}
+
+window.WEDNESDAY_SET_STATE = setWednesdayCharacterState;
+
 let activeRequestController = null;
 let activeRequestId = 0;
 
