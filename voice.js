@@ -1,5 +1,7 @@
 
-/* WEDNESDAY voice interface — local Faster-Whisper + browser speech output */
+/* WEDNESDAY voice interface
+   Local Faster-Whisper + natural browser speech
+*/
 
 (() => {
   const TRANSCRIBE_URL = "http://127.0.0.1:8000/transcribe";
@@ -13,7 +15,10 @@
   let busy = false;
   let preferredVoice = null;
 
-  // Display voice status
+  // -----------------------------------
+  // STATUS DISPLAY
+  // -----------------------------------
+
   function setStatus(message, state = "idle") {
     const status = $("#wednesday-voice-status");
     const button = $("#wednesday-mic-button");
@@ -34,10 +39,8 @@
     }
   }
 
-  // Convert errors into readable messages
   function getErrorMessage(error) {
     if (error instanceof Error) return error.message;
-
     if (typeof error === "string") return error;
 
     if (error && typeof error === "object") {
@@ -52,57 +55,141 @@
     return String(error || "Unknown error");
   }
 
-  // Select an available Hindi or English voice
+  // -----------------------------------
+  // CLEAN TEXT BEFORE SPEAKING
+  // -----------------------------------
+
+  function cleanForSpeech(text) {
+    let clean = String(text || "");
+
+    // Do not read programming code aloud.
+    clean = clean.replace(/```[\s\S]*?```/g, " ");
+
+    // Keep the words inside inline code.
+    clean = clean.replace(/`([^`]+)`/g, "$1");
+
+    // Keep image descriptions, not image URLs.
+    clean = clean.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1");
+
+    // Keep link names, remove link addresses.
+    clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+    // Remove raw web addresses.
+    clean = clean.replace(/https?:\/\/\S+/gi, " ");
+
+    // Remove Markdown headings and formatting.
+    clean = clean.replace(/^#{1,6}\s*/gm, "");
+    clean = clean.replace(/^\s*[-*+]\s+/gm, "");
+    clean = clean.replace(/^\s*\d+[.)]\s+/gm, "");
+    clean = clean.replace(/^\s*>\s?/gm, "");
+    clean = clean.replace(/[*_~]{1,3}/g, "");
+    clean = clean.replace(/[*#`]/g, "");
+
+    // Remove HTML tags.
+    clean = clean.replace(/<[^>]*>/g, " ");
+
+    // Decode common HTML entities.
+    clean = clean
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, " and ")
+      .replace(/&lt;/gi, " less than ")
+      .replace(/&gt;/gi, " greater than ")
+      .replace(/&quot;/gi, "")
+      .replace(/&#39;/gi, "");
+
+    // Make common symbols sound natural.
+    clean = clean
+      .replace(/₹\s*(\d+(?:,\d+)*(?:\.\d+)?)/g, "$1 rupees")
+      .replace(/(\d+(?:\.\d+)?)%/g, "$1 percent")
+      .replace(/&/g, " and ");
+
+    // Remove decorative symbols and repeated punctuation.
+    clean = clean.replace(/[ \t]+/g, " ");
+    clean = clean.replace(/\n{2,}/g, ". ");
+    clean = clean.replace(/\s+([,.!?;:])/g, "$1");
+    clean = clean.replace(/([,.!?]){2,}/g, "$1");
+
+    return clean.trim();
+  }
+
+  // -----------------------------------
+  // SELECT NATURAL AVAILABLE VOICE
+  // -----------------------------------
+
   function chooseVoice(text = "") {
     if (!("speechSynthesis" in window)) return;
 
     const voices = window.speechSynthesis.getVoices();
+
+    if (!voices.length) {
+      preferredVoice = null;
+      return;
+    }
+
     const wantsHindi = /[\u0900-\u097F]/.test(text);
 
     const preferredLanguage = wantsHindi
       ? /^(hi|hi-IN)/i
-      : /^(en|en-IN)/i;
+      : /^(en-IN|en-GB|en-US|en)/i;
+
+    const preferredNames =
+      /female|zira|aria|jenny|samantha|heera/i;
 
     preferredVoice =
       voices.find(
-        (v) =>
-          preferredLanguage.test(v.lang) &&
-          /female|zira|aria|jenny|samantha|heera/i.test(v.name)
+        (voice) =>
+          preferredLanguage.test(voice.lang) &&
+          preferredNames.test(voice.name)
       ) ||
-      voices.find((v) => preferredLanguage.test(v.lang)) ||
-      voices.find((v) =>
-        /female|zira|aria|jenny|samantha|heera/i.test(v.name)
+      voices.find((voice) =>
+        preferredLanguage.test(voice.lang)
+      ) ||
+      voices.find((voice) =>
+        preferredNames.test(voice.name)
       ) ||
       voices[0] ||
       null;
   }
 
-  // Speak AI responses
+  // -----------------------------------
+  // SPEAK AI RESPONSES
+  // -----------------------------------
+
   window.WEDNESDAY_SPEAK = function (text) {
     if (!("speechSynthesis" in window) || !text) return;
 
+    // Stop previous speech.
     window.speechSynthesis.cancel();
 
-    chooseVoice(text);
+    const cleanText = cleanForSpeech(text);
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    if (!cleanText) return;
+
+    chooseVoice(cleanText);
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
 
     if (preferredVoice) {
       utterance.voice = preferredVoice;
       utterance.lang = preferredVoice.lang || "en-IN";
     } else {
-      utterance.lang = /[\u0900-\u097F]/.test(text)
+      utterance.lang = /[\u0900-\u097F]/.test(cleanText)
         ? "hi-IN"
         : "en-IN";
     }
 
-    utterance.rate = 1.08;
-    utterance.pitch = 1.08;
+    // Natural speaking settings.
+    utterance.rate = 0.96;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
 
     window.speechSynthesis.speak(utterance);
   };
 
-  // Add microphone button to chat
+  // -----------------------------------
+  // MICROPHONE CONTROLS
+  // -----------------------------------
+
   function addVoiceControls() {
     const compose = $("#chat-form");
     const input = $("#chat-input");
@@ -150,7 +237,10 @@
     });
   }
 
-  // Start microphone recording
+  // -----------------------------------
+  // START RECORDING
+  // -----------------------------------
+
   async function startRecording() {
     try {
       if (typeof window.WEDNESDAY_INTERRUPT === "function") {
@@ -159,7 +249,7 @@
 
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error(
-          "Microphone unavailable. Open the website in Chrome over HTTPS."
+          "Microphone unavailable. Open WEDNESDAY using HTTPS."
         );
       }
 
@@ -200,7 +290,6 @@
       console.error("WEDNESDAY microphone error:", error);
 
       cleanup();
-
       recording = false;
 
       setStatus(
@@ -210,7 +299,10 @@
     }
   }
 
-  // Stop recording and send audio to Faster-Whisper
+  // -----------------------------------
+  // STOP AND TRANSCRIBE
+  // -----------------------------------
+
   async function stopAndTranscribe() {
     if (!recorder || !recording) return;
 
@@ -251,12 +343,10 @@
       cleanup();
 
       if (!blob.size) {
-        throw new Error(
-          "No audio was recorded. Please try again."
-        );
+        throw new Error("No audio was recorded. Please try again.");
       }
 
-      // Upload audio using the field name required by FastAPI
+      // FastAPI expects the multipart field to be named "file".
       const form = new FormData();
 
       form.append(
@@ -271,26 +361,23 @@
       });
 
       if (!response.ok) {
-        let detail = "Voice server returned HTTP " + response.status;
+        let detail =
+          "Voice server returned HTTP " + response.status;
 
         try {
           const errorData = await response.json();
-
-          detail = getErrorMessage(
-            errorData.detail || errorData
-          );
+          detail = getErrorMessage(errorData.detail || errorData);
         } catch (_) {}
 
         throw new Error(detail);
       }
 
       const result = await response.json();
-
       const transcript = (result.text || "").trim();
 
       if (!transcript) {
         setStatus(
-          "I couldn't hear clear words. Please speak closer to the microphone.",
+          "I couldn't hear clear words. Please try again.",
           "error"
         );
         return;
@@ -307,11 +394,11 @@
       input.value = transcript;
 
       setStatus(
-        `Heard (${result.language || "language detected"}): ${transcript}`,
+        "Heard: " + transcript,
         "ready"
       );
 
-      // Send the transcript to WEDNESDAY AI
+      // Send recognised words to WEDNESDAY.
       chatForm.requestSubmit();
 
     } catch (error) {
@@ -328,7 +415,10 @@
     }
   }
 
-  // Release microphone and clear recording data
+  // -----------------------------------
+  // RELEASE MICROPHONE
+  // -----------------------------------
+
   function cleanup() {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
@@ -339,17 +429,19 @@
     chunks = [];
   }
 
-  // Initialize available browser voices
+  // -----------------------------------
+  // INITIALIZE
+  // -----------------------------------
+
   if ("speechSynthesis" in window) {
     chooseVoice();
 
     window.speechSynthesis.addEventListener?.(
       "voiceschanged",
-      chooseVoice
+      () => chooseVoice()
     );
   }
 
-  // Initialize voice controls
   if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",
