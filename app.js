@@ -261,7 +261,13 @@ $("#chat-form")?.addEventListener("submit", async e => {
     if (paragraph) paragraph.textContent = answer;
     if (small) small.remove();
     conversationHistory.push({ role: "assistant", content: answer });
-    if (typeof window.WEDNESDAY_SPEAK === "function") window.WEDNESDAY_SPEAK(answer);
+   if (typeof window.WEDNESDAY_SET_STATE === "function") {
+  window.WEDNESDAY_SET_STATE("speaking");
+}
+
+if (typeof window.WEDNESDAY_SPEAK === "function") {
+  window.WEDNESDAY_SPEAK(answer);
+}
   } catch (error) {
     if (error.name === "AbortError") {
       if (paragraph) paragraph.textContent = "I stopped. I'm listening to your new instruction.";
