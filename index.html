@@ -79,10 +79,78 @@
         </div>
       </section>
 
-      <section class="page" id="page-assistant">
-        <div class="section-heading"><div><span class="eyebrow">THINK • PLAN • CREATE</span><h2>Talk to WEDNESDAY</h2><p class="muted">Ask questions, brainstorm, plan or get help writing a response.</p></div></div>
-        <div class="chat-panel panel"><div class="chat-header"><div class="orb-mini">W</div><div><b>WEDNESDAY</b><small>Local Ollama AI</small></div><span class="level approval">Draft mode</span></div><div class="chat-body" id="chat-body"><div class="assistant-bubble"><b>Hello! I'm WEDNESDAY.</b><p>Your local assistant is ready when Ollama is running.</p><small>Local AI · Llama 3.2</small></div></div><form id="chat-form" class="chat-compose"><input id="chat-input" placeholder="Ask WEDNESDAY anything…" autocomplete="off"><button class="primary-btn" type="submit">Send ↗</button></form></div>
-      </section>
+     
+<section class="page" id="page-assistant">
+  <div class="section-heading">
+    <div>
+      <span class="eyebrow">THINK • PLAN • CREATE</span>
+      <h2>Talk to WEDNESDAY</h2>
+      <p class="muted">Ask questions, brainstorm, plan or get help writing a response.</p>
+    </div>
+  </div>
+
+  <div class="assistant-stage" id="wednesday-stage" data-state="idle">
+
+    <!-- Character companions -->
+    <aside class="character-companions" aria-label="WEDNESDAY companions">
+
+      <div class="character-card character-shinchan">
+        <div class="character-image">
+          <img src="./assets/shinchan.png"
+               alt="Shinchan companion"
+               id="shinchan-character">
+        </div>
+        <div class="character-caption">
+          <b>Shinchan</b>
+          <small>WEDNESDAY's little companion</small>
+        </div>
+      </div>
+
+      <div class="character-card character-himawari">
+        <div class="character-image">
+          <img src="./assets/himawari.png"
+               alt="Himawari companion"
+               id="himawari-character">
+        </div>
+        <div class="character-caption">
+          <b>Himawari</b>
+          <small>Always ready to help!</small>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Existing WEDNESDAY chat -->
+    <div class="chat-panel panel">
+
+      <div class="chat-header">
+        <div class="orb-mini">W</div>
+        <div>
+          <b>WEDNESDAY</b>
+          <small>Local Ollama AI · Llama 3.2</small>
+        </div>
+        <span class="level approval">Draft mode</span>
+      </div>
+
+      <div class="chat-body" id="chat-body">
+        <div class="assistant-bubble">
+          <b>Hello! I'm WEDNESDAY.</b>
+          <p>Your local assistant is ready when Ollama is running.</p>
+          <small>Local AI · Llama 3.2</small>
+        </div>
+      </div>
+
+      <form id="chat-form" class="chat-compose">
+        <input id="chat-input"
+               placeholder="Ask WEDNESDAY anything…"
+               autocomplete="off">
+        <button class="primary-btn" type="submit">Send ↗</button>
+      </form>
+
+    </div>
+  </div>
+</section>
+
 
       <section class="page" id="page-clients">
         <div class="section-heading"><div><span class="eyebrow">RELATIONSHIP MANAGEMENT</span><h2>Client CRM</h2><p class="muted">Keep client details, requirements and follow-ups together.</p></div></div>
