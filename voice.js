@@ -1,7 +1,9 @@
 
 /* WEDNESDAY voice interface — local Faster-Whisper + browser speech output */
+
 (() => {
   const TRANSCRIBE_URL = "http://127.0.0.1:8000/transcribe";
+
   const $ = (selector) => document.querySelector(selector);
 
   let recorder = null;
@@ -11,6 +13,7 @@
   let busy = false;
   let preferredVoice = null;
 
+  // Display voice status
   function setStatus(message, state = "idle") {
     const status = $("#wednesday-voice-status");
     const button = $("#wednesday-mic-button");
@@ -31,8 +34,10 @@
     }
   }
 
+  // Convert errors into readable messages
   function getErrorMessage(error) {
     if (error instanceof Error) return error.message;
+
     if (typeof error === "string") return error;
 
     if (error && typeof error === "object") {
@@ -47,6 +52,7 @@
     return String(error || "Unknown error");
   }
 
+  // Select an available Hindi or English voice
   function chooseVoice(text = "") {
     if (!("speechSynthesis" in window)) return;
 
@@ -71,10 +77,12 @@
       null;
   }
 
+  // Speak AI responses
   window.WEDNESDAY_SPEAK = function (text) {
     if (!("speechSynthesis" in window) || !text) return;
 
     window.speechSynthesis.cancel();
+
     chooseVoice(text);
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -94,6 +102,7 @@
     window.speechSynthesis.speak(utterance);
   };
 
+  // Add microphone button to chat
   function addVoiceControls() {
     const compose = $("#chat-form");
     const input = $("#chat-input");
@@ -101,6 +110,7 @@
     if (!compose || !input || $("#wednesday-mic-button")) return;
 
     const mic = document.createElement("button");
+
     mic.type = "button";
     mic.id = "wednesday-mic-button";
     mic.className = "secondary-btn";
@@ -110,6 +120,7 @@
       "white-space:nowrap;min-height:44px;padding:10px 14px;cursor:pointer;";
 
     const status = document.createElement("small");
+
     status.id = "wednesday-voice-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
@@ -120,8 +131,11 @@
 
     const submit = compose.querySelector('button[type="submit"]');
 
-    if (submit) compose.insertBefore(mic, submit);
-    else compose.append(mic);
+    if (submit) {
+      compose.insertBefore(mic, submit);
+    } else {
+      compose.append(mic);
+    }
 
     compose.append(status);
 
@@ -136,6 +150,7 @@
     });
   }
 
+  // Start microphone recording
   async function startRecording() {
     try {
       if (typeof window.WEDNESDAY_INTERRUPT === "function") {
@@ -144,7 +159,7 @@
 
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error(
-          "Microphone access is unavailable. Open the website in Chrome over HTTPS."
+          "Microphone unavailable. Open the website in Chrome over HTTPS."
         );
       }
 
@@ -163,6 +178,7 @@
         : "audio/webm";
 
       recorder = new MediaRecorder(stream, { mimeType });
+
       chunks = [];
 
       recorder.addEventListener("dataavailable", (event) => {
@@ -172,16 +188,19 @@
       });
 
       recorder.start(250);
+
       recording = true;
 
       setStatus(
         "Listening… speak clearly, then tap Stop & send",
         "recording"
       );
+
     } catch (error) {
       console.error("WEDNESDAY microphone error:", error);
 
       cleanup();
+
       recording = false;
 
       setStatus(
@@ -191,6 +210,7 @@
     }
   }
 
+  // Stop recording and send audio to Faster-Whisper
   async function stopAndTranscribe() {
     if (!recorder || !recording) return;
 
@@ -203,13 +223,19 @@
       const currentRecorder = recorder;
 
       const finished = new Promise((resolve, reject) => {
-        currentRecorder.addEventListener("stop", resolve, {
-          once: true
-        });
+        currentRecorder.addEventListener(
+          "stop",
+          resolve,
+          { once: true }
+        );
 
         currentRecorder.addEventListener(
           "error",
-          (event) => reject(event.error || new Error("Recording failed")),
+          (event) => {
+            reject(
+              event.error || new Error("Audio recording failed.")
+            );
+          },
           { once: true }
         );
       });
@@ -226,14 +252,15 @@
 
       if (!blob.size) {
         throw new Error(
-          "No audio was recorded. Please try speaking again."
+          "No audio was recorded. Please try again."
         );
       }
 
+      // Upload audio using the field name required by FastAPI
       const form = new FormData();
 
       form.append(
-        "audio",
+        "file",
         blob,
         "wednesday-recording.webm"
       );
@@ -248,13 +275,17 @@
 
         try {
           const errorData = await response.json();
-          detail = getErrorMessage(errorData.detail || errorData);
+
+          detail = getErrorMessage(
+            errorData.detail || errorData
+          );
         } catch (_) {}
 
         throw new Error(detail);
       }
 
       const result = await response.json();
+
       const transcript = (result.text || "").trim();
 
       if (!transcript) {
@@ -280,14 +311,16 @@
         "ready"
       );
 
+      // Send the transcript to WEDNESDAY AI
       chatForm.requestSubmit();
 
     } catch (error) {
       console.error("WEDNESDAY voice error:", error);
 
-      const message = getErrorMessage(error);
-
-      setStatus("Voice error: " + message, "error");
+      setStatus(
+        "Voice error: " + getErrorMessage(error),
+        "error"
+      );
 
     } finally {
       cleanup();
@@ -295,6 +328,7 @@
     }
   }
 
+  // Release microphone and clear recording data
   function cleanup() {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
@@ -305,6 +339,7 @@
     chunks = [];
   }
 
+  // Initialize available browser voices
   if ("speechSynthesis" in window) {
     chooseVoice();
 
@@ -314,9 +349,14 @@
     );
   }
 
+  // Initialize voice controls
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", addVoiceControls);
+    document.addEventListener(
+      "DOMContentLoaded",
+      addVoiceControls
+    );
   } else {
     addVoiceControls();
   }
+
 })();
