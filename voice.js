@@ -178,13 +178,34 @@
         : "en-IN";
     }
 
-    // Natural speaking settings.
-    utterance.rate = 0.96;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
+   
+// Natural speaking settings.
+utterance.rate = 0.96;
+utterance.pitch = 1.0;
+utterance.volume = 1.0;
 
-    window.speechSynthesis.speak(utterance);
-  };
+// Character animation: start speaking.
+utterance.onstart = () => {
+  if (typeof window.WEDNESDAY_SET_STATE === "function") {
+    window.WEDNESDAY_SET_STATE("speaking");
+  }
+};
+
+// Character animation: return to idle after speaking.
+utterance.onend = () => {
+  if (typeof window.WEDNESDAY_SET_STATE === "function") {
+    window.WEDNESDAY_SET_STATE("idle");
+  }
+};
+
+utterance.onerror = () => {
+  if (typeof window.WEDNESDAY_SET_STATE === "function") {
+    window.WEDNESDAY_SET_STATE("error");
+  }
+};
+
+window.speechSynthesis.speak(utterance);
+};
 
   // -----------------------------------
   // MICROPHONE CONTROLS
