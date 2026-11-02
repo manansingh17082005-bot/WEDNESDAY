@@ -1,0 +1,62 @@
+
+/* WEDNESDAY cartoon-inspired companion theme — additive CSS */
+:root{
+  --bg:#fff8ee;--panel:#fffdf8;--panel2:#fff0d9;--line:#f0d9bd;
+  --text:#382d32;--muted:#88777a;--purple:#ed6b56;--blue:#68a9d7;
+  --green:#70b88b;--amber:#f0b84f;--danger:#d96b6b;
+}
+body{background:radial-gradient(circle at 12% 8%,#ffe8d2 0,transparent 28%),radial-gradient(circle at 90% 15%,#e8f5ff 0,transparent 25%),#fff8ee;color:var(--text)}
+.sidebar{background:#fff1df;border-right:2px solid #f1d7b9}
+.brand-mark{border-radius:15px;background:linear-gradient(145deg,#ff9b70,#ed604f);box-shadow:0 4px 0 #d94f43}
+.brand strong{color:#4b3335}
+.brand small,.profile small{color:#9a7774}
+.profile,.panel,.stat-card,.integration-card,.chat-panel,.wa-reply-panel,.notice,.config-panel{background:#fffdf8;border:2px solid #f0d9bd;border-radius:20px;box-shadow:0 5px 0 #f1dfca}
+.profile{background:#fffaf2}
+.avatar{background:#ffdbad;color:#75443d}
+.nav-item{color:#806c70;border-radius:13px;font-weight:700}
+.nav-item span{color:#e56b58}
+.nav-item:hover,.nav-item.active{background:#ffdfc6;color:#633b39;box-shadow:inset 0 0 0 1px #f5c5a5}
+.safe-card{background:#eaf7ed;border:2px solid #cbe7d0;border-radius:17px;color:#3f684b}
+.safe-card small{color:#67806b}
+.main{max-width:1680px}
+.eyebrow{color:#d96753}
+.topbar h1,.section-heading h2,.panel h3,.wa-reply-heading h3{color:#47353a}
+.sync-pill{background:#e9f6ec;border:1px solid #c9e5cf;color:#4b7658}
+.primary-btn{background:linear-gradient(180deg,#ff8b6d,#ed6655);border:0;border-radius:13px;box-shadow:0 4px 0 #cf5145;color:white;font-weight:800}
+.primary-btn:hover{filter:brightness(1.04);transform:translateY(-1px)}
+.secondary-btn,.icon-btn{background:#fff1df;border:2px solid #efd4b5;color:#765451;border-radius:13px}
+.welcome-panel{background:linear-gradient(125deg,#ff9876,#f36d5e 58%,#f5a85f);border:3px solid #fff0d8;border-radius:25px;box-shadow:0 7px 0 #e8c4a7}
+.welcome-panel h2{font-size:clamp(25px,3vw,36px);line-height:1.12}
+.welcome-panel p{color:#fff3e9}
+.welcome-panel .eyebrow{color:#fff2dc}
+.orb{background:radial-gradient(circle,#ffe9aa 0 20%,#ffca78 21% 47%,#f68a67 48% 68%,#ffd3a6 69%);box-shadow:0 0 0 10px #ffffff25,0 10px 25px #8d443333}
+.orb-core{background:#fff3da;color:#e56c58;border-radius:24px}
+.stat-card{border-radius:19px}
+.stat-icon{border-radius:14px}
+.content-grid{gap:20px}
+.panel{padding:22px}
+.task-list li{border-bottom:1px dashed #ead8c7}
+.chat-header{background:#fff1df;border-radius:15px}
+.assistant-bubble{background:#fff0d9;color:#57454a;border:1px solid #f0d6b8;border-radius:18px 18px 18px 5px}
+.user-bubble{background:#e8f4ff;color:#3b5368;border-radius:18px 18px 5px 18px}
+input,select,textarea{background:#fffaf3!important;border-color:#e8d3bf!important;color:#46383b!important;border-radius:12px!important}
+input:focus,select:focus,textarea:focus{border-color:#ee927b!important;box-shadow:0 0 0 3px #ee927b22!important}
+footer{color:#9b8580}
+.cartoon-cast{margin:25px 0 30px;padding:22px;display:grid;grid-template-columns:minmax(210px,.9fr) minmax(0,2fr);gap:20px;align-items:center;background:#fff4e4;border:2px solid #f0d6b8;border-radius:24px;box-shadow:0 5px 0 #ecd8c1}
+.cast-intro h2{font:800 clamp(18px,2vw,24px) Manrope;margin:8px 0;color:#50383c}
+.cast-intro p{color:#8c7473;line-height:1.65;margin:0;max-width:310px}
+.cast-members{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cast-card{min-width:0;display:flex;align-items:center;gap:11px;padding:13px 10px;border:2px solid #f0d9c4;border-radius:18px;background:#fffdf9}
+.cast-art{position:relative;flex:0 0 62px;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:#ffe2c9;box-shadow:inset 0 -4px 0 #f2c9a8}
+.cast-art span{font-size:37px;line-height:1;filter:drop-shadow(0 2px 1px #79514a20)}
+.cast-spark{position:absolute;right:-3px;top:-5px;font-style:normal;font-size:18px;color:#e9785c}
+.cast-card b,.cast-card small,.cast-card em{display:block}
+.cast-card b{font:800 14px Manrope;color:#49363a}
+.cast-card small{font-size:10px;color:#8e7778;margin-top:4px}
+.cast-card em{font-style:normal;font-size:9px;font-weight:700;color:#6b9b72;margin-top:7px}
+.cast-himawari .cast-art{background:#fff0b9;box-shadow:inset 0 -4px 0 #f1d98a}
+.cast-himawari .cast-spark{color:#e8a52e}
+.cast-shiro .cast-art{background:#e6f3ff;box-shadow:inset 0 -4px 0 #c8dfef}
+.cast-shiro .cast-spark{color:#e87979}
+@media(max-width:1050px){.cartoon-cast{grid-template-columns:1fr}.cast-intro p{max-width:unset}}
+@media(max-width:650px){.cartoon-cast{padding:16px;border-radius:19px}.cast-members{grid-template-columns:1fr}.cast-card{padding:10px 12px}.cast-art{width:54px;height:54px;flex-basis:54px}.cast-art span{font-size:32px}.welcome-panel{border-radius:20px}}
