@@ -58,3 +58,13 @@
 #wednesday-stage[data-state="speaking"] .classic-character-image{animation:classic-character-talk .22s ease-in-out infinite alternate}
 @keyframes classic-character-talk{to{translate:0 -2px;scale:1.015}}
 #wednesday-stage[data-state="thinking"] .classic-character-image{filter:drop-shadow(0 5px 3px #8b675044) saturate(.88)}
+
+
+/* Movable and gently wandering companions */
+.buddy-scene{position:relative;overflow:hidden}
+.buddy-art{position:absolute;left:50%;bottom:0;margin-left:0;transform:translate3d(calc(-50% + var(--wander-x,0px) + var(--drag-x,0px)),var(--drag-y,0px),0);transition:filter .2s}
+.buddy-art:active{cursor:grabbing}
+.buddy-scene.buddy-hovered .buddy-art{animation-play-state:paused}
+.buddy-art .classic-character-image{pointer-events:none}
+.buddy-art{touch-action:none;user-select:none;-webkit-user-select:none}
+@media(prefers-reduced-motion:reduce){.buddy-art,.classic-character-image{animation:none!important;transition:none!important}}
