@@ -560,6 +560,7 @@ function renderClients() {
   const table = $("client-table");
   if (!table) return;
 
+  setText("client-total", `${clients.length} saved client${clients.length === 1 ? "" : "s"}`);
   const search = ($("client-search")?.value || "").trim().toLowerCase();
   const filtered = clients.filter(client =>
     [client.name, client.company, client.phone, client.email, client.service, client.status]
