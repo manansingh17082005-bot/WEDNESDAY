@@ -560,36 +560,42 @@ function renderClients() {
   const table = $("client-table");
   if (!table) return;
 
-  if (!clients.length) {
-    table.innerHTML = "<p>No clients added yet.</p>";
+  const search = ($("client-search")?.value || "").trim().toLowerCase();
+  const filtered = clients.filter(client =>
+    [client.name, client.company, client.phone, client.email, client.service, client.status]
+      .some(value => String(value || "").toLowerCase().includes(search))
+  );
+
+  if (!filtered.length) {
+    table.innerHTML = `<tr><td colspan="7" class="empty">${clients.length ? "No clients match your search." : "No clients added yet. Add your first client above."}</td></tr>`;
     updateDashboard();
     return;
   }
 
-  table.innerHTML = `
-    <div class="client-list">
-      ${clients.map(client => `
-        <div class="client-row">
-          <strong>${escapeHTML(client.name)}</strong>
-          <span>${escapeHTML(client.contact || "No contact")}</span>
-          <span>${escapeHTML(client.service || "Not specified")}</span>
+  table.innerHTML = filtered.map(client => {
+    const digits = String(client.phone || "").replace(/\\D/g, "");
+    const whatsapp = digits.length >= 10 && digits.length <= 15
+      ? `<a class="secondary-btn client-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer">Open WhatsApp</a>`
+      : '<span class="muted">Add valid phone</span>';
 
-          <button
-            type="button"
-            class="secondary-btn"
-            data-client-delete="${escapeHTML(client.id)}"
-          >Delete</button>
-        </div>
-      `).join("")}
-    </div>
-  `;
+    return `<tr>
+      <td><strong>${escapeHTML(client.name)}</strong></td>
+      <td>${escapeHTML(client.company || "—")}</td>
+      <td>${escapeHTML(client.phone || "—")}</td>
+      <td>${escapeHTML(client.email || "—")}</td>
+      <td>${escapeHTML(client.service || "—")}</td>
+      <td><span class="client-status">${escapeHTML(client.status || "New")}</span></td>
+      <td class="client-actions">${whatsapp}
+        <button type="button" class="secondary-btn" data-client-delete="${escapeHTML(client.id)}">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
 
   table.querySelectorAll("[data-client-delete]").forEach(button => {
     button.addEventListener("click", () => {
-      clients = clients.filter(
-        client => client.id !== button.dataset.clientDelete
-      );
-
+      const client = clients.find(item => item.id === button.dataset.clientDelete);
+      if (!client || !window.confirm(`Delete ${client.name} from your client table?`)) return;
+      clients = clients.filter(item => item.id !== button.dataset.clientDelete);
       saveData(STORAGE_KEYS.clients, clients);
       renderClients();
     });
@@ -606,25 +612,32 @@ function initializeClients() {
     event.preventDefault();
 
     const name = $("client-name")?.value.trim();
-    const contact = $("client-contact")?.value.trim();
+    const company = $("client-company")?.value.trim();
+    const phone = $("client-phone")?.value.trim();
+    const email = $("client-email")?.value.trim();
     const service = $("client-service")?.value.trim();
+    const status = $("client-status")?.value || "New";
 
     if (!name) return;
 
     clients.unshift({
       id: createId(),
       name,
-      contact,
+      company,
+      phone,
+      email,
       service,
+      status,
       createdAt: new Date().toISOString()
     });
 
     saveData(STORAGE_KEYS.clients, clients);
-
     form.reset();
     renderClients();
+    showStatus("client-status-message", "Client saved in this browser.");
   });
 
+  $("client-search")?.addEventListener("input", renderClients);
   renderClients();
 }
 
