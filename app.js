@@ -803,6 +803,26 @@ function initializeOutreach() {
   const generateButton = $("outreach-generate-btn");
   const clearButton = $("outreach-clear-btn");
   const copyButton = $("outreach-copy-btn");
+  const whatsappButton = $("outreach-whatsapp-btn");
+  const clientSelect = $("outreach-client-select");
+
+  if (clientSelect) {
+    clientSelect.innerHTML = '<option value="">Enter a new prospect below</option>' +
+      clients.map(client => '<option value="' + escapeHTML(client.id) + '">' +
+        escapeHTML(client.name) + (client.company ? ' — ' + escapeHTML(client.company) : '') +
+        '</option>').join('');
+
+    clientSelect.addEventListener("change", () => {
+      const client = clients.find(item => item.id === clientSelect.value);
+      if (!client) return;
+      if ($("outreach-business")) $("outreach-business").value = client.company || client.name;
+      if ($("outreach-phone")) $("outreach-phone").value = client.phone || client.contact || "";
+      if ($("outreach-service") && client.service) {
+        const option = [...$("outreach-service").options].find(item => item.value === client.service);
+        if (option) $("outreach-service").value = client.service;
+      }
+    });
+  }
 
   if (generateButton) {
     generateButton.addEventListener("click", async () => {
@@ -876,6 +896,24 @@ Requirements:
       } finally {
         generateButton.disabled = false;
       }
+    });
+  }
+
+  if (whatsappButton) {
+    whatsappButton.addEventListener("click", () => {
+      const draft = $("outreach-draft")?.value.trim() || "";
+      const rawPhone = $("outreach-phone")?.value.trim() || "";
+      const digits = rawPhone.replace(/\D/g, "");
+      if (!draft) {
+        showStatus("outreach-status", "Generate or enter a message first.", true);
+        return;
+      }
+      if (digits.length < 10 || digits.length > 15) {
+        showStatus("outreach-status", "Enter a valid WhatsApp number with country code, e.g. 919876543210.", true);
+        return;
+      }
+      window.open("https://wa.me/" + digits + "?text=" + encodeURIComponent(draft), "_blank", "noopener,noreferrer");
+      showStatus("outreach-status", "WhatsApp chat opened with your draft. Review it and press Send yourself.");
     });
   }
 
