@@ -668,7 +668,7 @@ function renderDiscoveredLeads() {
     </div>
     <div class="table-wrap">
       <table class="lead-table">
-        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>EMAIL</th><th>SOURCE</th><th>CHECK</th></tr></thead>
+        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>OPENING DATE</th></tr></thead>
         <tbody>
           ${discoveredLeads.map((lead, index) => `
             <tr>
@@ -677,7 +677,7 @@ function renderDiscoveredLeads() {
               <td>${escapeHTML(lead.phone || "Not found")}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
-              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
+              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>\n              <td><span class="client-status">${lead.openingDateVerified ? "Verified" : "Not verified"}</span></td>
             </tr>`
           ).join("")}
         </tbody>
