@@ -563,7 +563,7 @@ function renderClients() {
   setText("client-total", `${clients.length} saved client${clients.length === 1 ? "" : "s"}`);
   const search = ($("client-search")?.value || "").trim().toLowerCase();
   const filtered = clients.filter(client =>
-    [client.name, client.company, client.phone, client.email, client.service, client.status]
+    [client.name, client.company, client.phone, client.email, client.contact, client.service, client.status]
       .some(value => String(value || "").toLowerCase().includes(search))
   );
 
