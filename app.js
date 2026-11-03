@@ -336,8 +336,7 @@ function updateDashboard() {
     tasks.filter(task => !task.completed).length
   );
 
-  // Live lead retrieval has not been connected yet.
-  setText("lead-count", "0");
+  setText("lead-count", discoveredLeads.length);
 
   const dateLabel = $("date-label");
 
