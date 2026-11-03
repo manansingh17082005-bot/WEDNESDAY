@@ -1,11 +1,13 @@
 
 /* =========================================================
-   WEDNESDAY — Main Application
-   Local AI: Ollama
+   WEDNESDAY COMMAND CENTER
+   Local-first application
+   AI engine: Ollama
    Storage: Browser localStorage
+   Supabase: Optional
    ========================================================= */
 
-/* ---------- CONFIGURATION ---------- */
+/* ================= CONFIGURATION ================= */
 
 const OLLAMA_URL = "http://localhost:11434/api/chat";
 const OLLAMA_MODEL = "llama3.2";
@@ -17,30 +19,32 @@ const STORAGE_KEYS = {
 };
 
 const WEDNESDAY_SYSTEM_PROMPT = `
-You are WEDNESDAY, a helpful, professional personal AI assistant.
+You are WEDNESDAY, a professional personal AI assistant.
 
 Your responsibilities:
-1. Help the user manage tasks, clients and daily work.
-2. Help find potential business leads using ethical and permitted methods.
+1. Help manage tasks, clients and daily work.
+2. Help generate business leads using ethical research methods.
 3. Create search strategies for Excel, data entry, video editing,
    website development, social media management, data analysis and logo design.
-4. Write professional outreach messages, follow-ups and business proposals.
-5. Help with business research, spreadsheets, productivity and learning.
+4. Write professional outreach messages and follow-ups.
+5. Help with business research, spreadsheets and productivity.
+6. Help the user learn technology and build projects.
 
 Rules:
 - Be practical, clear and professional.
-- Never invent real businesses, contact details, reviews or search results.
-- Clearly distinguish search suggestions from verified leads.
-- Never claim that you searched a website unless a real search was performed.
-- Never send messages or contact anyone automatically.
+- Never invent real businesses, contact details or search results.
+- Distinguish search suggestions from verified leads.
+- Never claim to have searched a website unless a real search was performed.
+- Never send messages automatically.
 - Ask for confirmation before consequential actions.
 - Keep the user's initial budget at zero unless they change it.
-- Give step-by-step instructions when helping with technical work.
+- Give step-by-step technical instructions.
 `;
 
-/* ---------- GLOBAL STATE ---------- */
+/* ================= GLOBAL STATE ================= */
 
 const conversationHistory = [];
+
 let activeRequestController = null;
 let activeRequestId = 0;
 
@@ -50,7 +54,10 @@ let clients = loadData(STORAGE_KEYS.clients, []);
 let supabaseClient = null;
 let supabaseAuthReady = false;
 
-/* ---------- GENERAL HELPERS ---------- */
+window.WEDNESDAY_LOCAL_MODE = true;
+window.WEDNESDAY_PAUSED = false;
+
+/* ================= GENERAL HELPERS ================= */
 
 function $(id) {
   return document.getElementById(id);
@@ -58,10 +65,10 @@ function $(id) {
 
 function loadData(key, fallback) {
   try {
-    const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : fallback;
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
   } catch (error) {
-    console.error("Storage read error:", error);
+    console.error("Storage error:", error);
     return fallback;
   }
 }
@@ -71,7 +78,7 @@ function saveData(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (error) {
-    console.error("Storage save error:", error);
+    console.error("Could not save data:", error);
     return false;
   }
 }
@@ -99,16 +106,30 @@ function escapeHTML(value) {
   })[character]);
 }
 
+function createId() {
+  return window.crypto?.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/* ================= WEDNESDAY CHARACTER STATE ================= */
+
 function setWednesdayCharacterState(state) {
   const stage = $("wednesday-stage");
   if (!stage) return;
 
-  const allowed = [
-    "idle", "listening", "thinking",
-    "speaking", "happy", "error"
+  const allowedStates = [
+    "idle",
+    "listening",
+    "thinking",
+    "speaking",
+    "happy",
+    "error"
   ];
 
-  stage.dataset.state = allowed.includes(state) ? state : "idle";
+  stage.dataset.state = allowedStates.includes(state)
+    ? state
+    : "idle";
 }
 
 window.WEDNESDAY_SET_STATE = setWednesdayCharacterState;
@@ -128,15 +149,10 @@ window.WEDNESDAY_INTERRUPT = function () {
   setWednesdayCharacterState("idle");
 };
 
-/* ---------- OLLAMA CONNECTION ---------- */
+/* ================= OLLAMA STREAMING AI ================= */
 
 async function askWednesday(message, onText = () => {}, signal) {
   setWednesdayCharacterState("thinking");
-
-  const messages = [
-    { role: "system", content: WEDNESDAY_SYSTEM_PROMPT },
-    ...conversationHistory
-  ];
 
   const response = await fetch(OLLAMA_URL, {
     method: "POST",
@@ -146,7 +162,10 @@ async function askWednesday(message, onText = () => {}, signal) {
     signal,
     body: JSON.stringify({
       model: OLLAMA_MODEL,
-      messages,
+      messages: [
+        { role: "system", content: WEDNESDAY_SYSTEM_PROMPT },
+        ...conversationHistory
+      ],
       stream: true,
       options: {
         temperature: 0.6
@@ -190,7 +209,9 @@ async function askWednesday(message, onText = () => {}, signal) {
 
         const data = JSON.parse(line);
 
-        if (data.error) throw new Error(data.error);
+        if (data.error) {
+          throw new Error(data.error);
+        }
 
         const token = data.message?.content || "";
 
@@ -206,7 +227,9 @@ async function askWednesday(message, onText = () => {}, signal) {
     if (buffer.trim()) {
       const data = JSON.parse(buffer);
 
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        throw new Error(data.error);
+      }
 
       const token = data.message?.content || "";
 
@@ -226,6 +249,8 @@ async function askWednesday(message, onText = () => {}, signal) {
   }
 }
 
+/* Non-streaming request for smaller AI tasks */
+
 async function askWednesdayOnce(prompt) {
   const response = await fetch(OLLAMA_URL, {
     method: "POST",
@@ -239,7 +264,9 @@ async function askWednesdayOnce(prompt) {
         { role: "user", content: prompt }
       ],
       stream: false,
-      options: { temperature: 0.6 }
+      options: {
+        temperature: 0.6
+      }
     })
   });
 
@@ -257,7 +284,7 @@ async function askWednesdayOnce(prompt) {
   return answer;
 }
 
-/* ---------- PAGE NAVIGATION ---------- */
+/* ================= NAVIGATION ================= */
 
 const pageTitles = {
   overview: "Overview",
@@ -273,16 +300,10 @@ const pageTitles = {
 
 function showPage(pageName) {
   document.querySelectorAll("[id^='page-']").forEach(page => {
-    page.classList.toggle(
-      "active",
-      page.id === `page-${pageName}`
-    );
+    const isActive = page.id === `page-${pageName}`;
 
-    if (page.id !== `page-${pageName}`) {
-      page.style.display = "none";
-    } else {
-      page.style.display = "";
-    }
+    page.classList.toggle("active", isActive);
+    page.style.display = isActive ? "" : "none";
   });
 
   document.querySelectorAll("[data-page]").forEach(button => {
@@ -293,16 +314,6 @@ function showPage(pageName) {
   });
 
   setText("page-title", pageTitles[pageName] || "WEDNESDAY");
-
-  const nav = $("nav");
-  if (nav) {
-    nav.querySelectorAll("[data-page]").forEach(button => {
-      button.setAttribute(
-        "aria-current",
-        button.dataset.page === pageName ? "page" : "false"
-      );
-    });
-  }
 }
 
 function initializeNavigation() {
@@ -315,23 +326,34 @@ function initializeNavigation() {
   showPage("overview");
 }
 
-/* ---------- DASHBOARD ---------- */
+/* ================= DASHBOARD ================= */
 
 function updateDashboard() {
   setText("client-count", clients.length);
+  setText(
+    "task-count",
+    tasks.filter(task => !task.completed).length
+  );
+
+  // Live lead retrieval has not been connected yet.
   setText("lead-count", "0");
-  setText("task-count", tasks.filter(task => !task.completed).length);
 
   const dateLabel = $("date-label");
+
   if (dateLabel) {
     dateLabel.textContent = new Date().toLocaleDateString(
       undefined,
-      { weekday: "long", day: "numeric", month: "long", year: "numeric" }
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }
     );
   }
 }
 
-/* ---------- TASK MANAGEMENT ---------- */
+/* ================= TASK MANAGEMENT ================= */
 
 function renderTasks() {
   const list = $("task-list");
@@ -355,6 +377,7 @@ function renderTasks() {
           ${escapeHTML(task.text)}
         </span>
       </label>
+
       <button
         type="button"
         class="secondary-btn"
@@ -365,10 +388,14 @@ function renderTasks() {
 
   list.querySelectorAll("[data-task-complete]").forEach(input => {
     input.addEventListener("change", () => {
-      const task = tasks.find(item => item.id === input.dataset.taskComplete);
+      const task = tasks.find(
+        item => item.id === input.dataset.taskComplete
+      );
+
       if (!task) return;
 
       task.completed = input.checked;
+
       saveData(STORAGE_KEYS.tasks, tasks);
       renderTasks();
     });
@@ -401,13 +428,14 @@ function initializeTasks() {
     if (!text) return;
 
     tasks.unshift({
-      id: crypto.randomUUID(),
+      id: createId(),
       text,
       completed: false,
       createdAt: new Date().toISOString()
     });
 
     saveData(STORAGE_KEYS.tasks, tasks);
+
     input.value = "";
     renderTasks();
   });
@@ -415,14 +443,18 @@ function initializeTasks() {
   renderTasks();
 }
 
-/* ---------- CHAT UI ---------- */
+/* ================= CHAT ASSISTANT ================= */
 
 function addChatMessage(text, type = "assistant") {
   const body = $("chat-body");
   if (!body) return null;
 
   const bubble = document.createElement("div");
-  bubble.className = type === "user" ? "user-bubble" : "assistant-bubble";
+
+  bubble.className = type === "user"
+    ? "user-bubble"
+    : "assistant-bubble";
+
   bubble.textContent = text;
 
   body.appendChild(bubble);
@@ -440,6 +472,13 @@ function initializeChat() {
   form.addEventListener("submit", async event => {
     event.preventDefault();
 
+    if (window.WEDNESDAY_PAUSED) {
+      addChatMessage(
+        "WEDNESDAY is paused. Resume the assistant to continue."
+      );
+      return;
+    }
+
     const message = input.value.trim();
     if (!message) return;
 
@@ -447,6 +486,7 @@ function initializeChat() {
 
     const requestId = activeRequestId;
     const controller = new AbortController();
+
     activeRequestController = controller;
 
     addChatMessage(message, "user");
@@ -474,6 +514,7 @@ function initializeChat() {
 
           if (replyBubble) {
             replyBubble.textContent = fullText;
+
             const body = $("chat-body");
             if (body) body.scrollTop = body.scrollHeight;
           }
@@ -497,7 +538,7 @@ function initializeChat() {
     } catch (error) {
       if (error.name === "AbortError") return;
 
-      console.error(error);
+      console.error("Assistant error:", error);
 
       if (replyBubble) {
         replyBubble.textContent =
@@ -513,7 +554,7 @@ function initializeChat() {
   });
 }
 
-/* ---------- CLIENT MANAGEMENT ---------- */
+/* ================= CLIENT MANAGEMENT ================= */
 
 function renderClients() {
   const table = $("client-table");
@@ -532,6 +573,7 @@ function renderClients() {
           <strong>${escapeHTML(client.name)}</strong>
           <span>${escapeHTML(client.contact || "No contact")}</span>
           <span>${escapeHTML(client.service || "Not specified")}</span>
+
           <button
             type="button"
             class="secondary-btn"
@@ -570,7 +612,7 @@ function initializeClients() {
     if (!name) return;
 
     clients.unshift({
-      id: crypto.randomUUID(),
+      id: createId(),
       name,
       contact,
       service,
@@ -578,6 +620,7 @@ function initializeClients() {
     });
 
     saveData(STORAGE_KEYS.clients, clients);
+
     form.reset();
     renderClients();
   });
@@ -585,11 +628,14 @@ function initializeClients() {
   renderClients();
 }
 
-/* ---------- LEAD GENERATION ---------- */
+/* ================= LEAD GENERATION ================= */
 
 function getCheckedValues(name) {
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)]
-    .map(input => input.value);
+  return [
+    ...document.querySelectorAll(
+      `input[name="${name}"]:checked`
+    )
+  ].map(input => input.value);
 }
 
 function initializeLeadGeneration() {
@@ -598,6 +644,11 @@ function initializeLeadGeneration() {
 
   if (searchButton) {
     searchButton.addEventListener("click", async () => {
+      if (window.WEDNESDAY_PAUSED) {
+        showStatus("lead-search-status", "WEDNESDAY is paused.", true);
+        return;
+      }
+
       const services = getCheckedValues("lead-service");
       const sources = getCheckedValues("lead-source");
 
@@ -607,7 +658,11 @@ function initializeLeadGeneration() {
       const limit = $("lead-limit")?.value || "20";
 
       if (!services.length) {
-        showStatus("lead-search-status", "Select at least one service.", true);
+        showStatus(
+          "lead-search-status",
+          "Select at least one service.",
+          true
+        );
         return;
       }
 
@@ -621,17 +676,25 @@ function initializeLeadGeneration() {
       }
 
       if (!sources.length) {
-        showStatus("lead-search-status", "Select at least one source.", true);
+        showStatus(
+          "lead-search-status",
+          "Select at least one source.",
+          true
+        );
         return;
       }
 
       searchButton.disabled = true;
-      showStatus("lead-search-status", "WEDNESDAY is preparing your search plan...");
+
+      showStatus(
+        "lead-search-status",
+        "WEDNESDAY is preparing your search plan..."
+      );
 
       const prompt = `
 Create a practical lead-generation search plan.
 
-Services I offer:
+Services offered:
 ${services.join(", ")}
 
 Target business type:
@@ -650,15 +713,16 @@ Desired lead target:
 ${limit}
 
 Return:
-1. A short search strategy.
+1. Search strategy.
 2. Search queries for each selected source.
-3. Useful filters to identify potential customers.
-4. A simple lead qualification checklist.
-5. A suggested spreadsheet structure.
+3. Useful filters.
+4. Lead qualification checklist.
+5. Suggested spreadsheet columns.
+6. A manual research workflow.
 
-Important:
-Do not invent businesses, names, phone numbers, email addresses,
-Instagram handles or verified leads.
+Do not invent businesses, names, phone numbers, emails,
+social media handles or verified search results.
+
 Return search queries and research instructions only.
 `;
 
@@ -666,6 +730,7 @@ Return search queries and research instructions only.
         const result = await askWednesdayOnce(prompt);
 
         const output = $("lead-search-results");
+
         if (output) {
           output.textContent = result;
           output.style.whiteSpace = "pre-wrap";
@@ -677,6 +742,7 @@ Return search queries and research instructions only.
         );
       } catch (error) {
         console.error(error);
+
         showStatus(
           "lead-search-status",
           `Could not generate the plan: ${error.message}`,
@@ -706,7 +772,7 @@ Return search queries and research instructions only.
   }
 }
 
-/* ---------- OUTREACH STUDIO ---------- */
+/* ================= OUTREACH STUDIO ================= */
 
 function initializeOutreach() {
   const generateButton = $("outreach-generate-btn");
@@ -715,6 +781,11 @@ function initializeOutreach() {
 
   if (generateButton) {
     generateButton.addEventListener("click", async () => {
+      if (window.WEDNESDAY_PAUSED) {
+        showStatus("outreach-status", "WEDNESDAY is paused.", true);
+        return;
+      }
+
       const business = $("outreach-business")?.value.trim();
       const service = $("outreach-service")?.value;
       const channel = $("outreach-channel")?.value;
@@ -732,7 +803,11 @@ function initializeOutreach() {
       }
 
       generateButton.disabled = true;
-      showStatus("outreach-status", "Writing your outreach draft...");
+
+      showStatus(
+        "outreach-status",
+        "Writing your outreach draft..."
+      );
 
       const prompt = `
 Write a personalised first-contact outreach message.
@@ -741,24 +816,24 @@ Business name: ${business}
 Service offered: ${service}
 Contact channel: ${channel}
 Tone: ${tone}
-Specific observation about the business: ${observation || "Not supplied"}
+Specific observation: ${observation || "Not supplied"}
 Additional context: ${context || "Not supplied"}
 
 Requirements:
 - Start naturally and professionally.
 - Mention a relevant business opportunity.
 - Explain how the service may help.
-- Avoid unrealistic promises and guaranteed results.
-- Do not pretend we have already worked with this business.
+- Avoid unrealistic promises.
+- Do not pretend we have worked with the business.
 - Include one clear call to action.
-- Keep it suitable for the selected contact channel.
+- Keep it suitable for the selected channel.
 - Return only the ready-to-review message.
 `;
 
       try {
         const draft = await askWednesdayOnce(prompt);
-        const output = $("outreach-draft");
 
+        const output = $("outreach-draft");
         if (output) output.value = draft;
 
         showStatus(
@@ -767,6 +842,7 @@ Requirements:
         );
       } catch (error) {
         console.error(error);
+
         showStatus(
           "outreach-status",
           `Could not generate the draft: ${error.message}`,
@@ -798,7 +874,11 @@ Requirements:
       const draft = $("outreach-draft")?.value.trim();
 
       if (!draft) {
-        showStatus("outreach-status", "There is no draft to copy.", true);
+        showStatus(
+          "outreach-status",
+          "There is no draft to copy.",
+          true
+        );
         return;
       }
 
@@ -808,7 +888,7 @@ Requirements:
       } catch (error) {
         showStatus(
           "outreach-status",
-          "Clipboard access failed. Select and copy the draft manually.",
+          "Clipboard access failed. Copy the draft manually.",
           true
         );
       }
@@ -816,7 +896,7 @@ Requirements:
   }
 }
 
-/* ---------- WHATSAPP REPLY ASSISTANT ---------- */
+/* ================= WHATSAPP REPLY ASSISTANT ================= */
 
 function initializeWhatsAppAssistant() {
   const generateButton = $("wa-generate-btn");
@@ -825,6 +905,11 @@ function initializeWhatsAppAssistant() {
 
   if (generateButton) {
     generateButton.addEventListener("click", async () => {
+      if (window.WEDNESDAY_PAUSED) {
+        showStatus("wa-status", "WEDNESDAY is paused.", true);
+        return;
+      }
+
       const customerName = $("wa-customer-name")?.value.trim();
       const language = $("wa-language")?.value;
       const tone = $("wa-tone")?.value;
@@ -832,7 +917,11 @@ function initializeWhatsAppAssistant() {
       const customerMessage = $("wa-customer-message")?.value.trim();
 
       if (!customerMessage) {
-        showStatus("wa-status", "Paste the customer's message first.", true);
+        showStatus(
+          "wa-status",
+          "Paste the customer's message first.",
+          true
+        );
         return;
       }
 
@@ -850,7 +939,7 @@ Business context: ${context || "Not provided"}
 Customer's message:
 ${customerMessage}
 
-Write a clear, natural, helpful reply.
+Write a clear, natural and helpful reply.
 Do not invent prices, delivery dates, policies or commitments.
 Return only the reply text.
 `;
@@ -860,14 +949,25 @@ Return only the reply text.
         const output = $("wa-reply-output");
 
         if (output) {
-          if ("value" in output) output.value = reply;
-          else output.textContent = reply;
+          if ("value" in output) {
+            output.value = reply;
+          } else {
+            output.textContent = reply;
+          }
         }
 
-        showStatus("wa-status", "Reply generated. Review before sending.");
+        showStatus(
+          "wa-status",
+          "Reply generated. Review it before sending."
+        );
       } catch (error) {
         console.error(error);
-        showStatus("wa-status", `Reply failed: ${error.message}`, true);
+
+        showStatus(
+          "wa-status",
+          `Reply failed: ${error.message}`,
+          true
+        );
       } finally {
         generateButton.disabled = false;
       }
@@ -885,8 +985,11 @@ Return only the reply text.
         const element = $(id);
         if (!element) return;
 
-        if ("value" in element) element.value = "";
-        else element.textContent = "";
+        if ("value" in element) {
+          element.value = "";
+        } else {
+          element.textContent = "";
+        }
       });
 
       showStatus("wa-status", "Reply form cleared.");
@@ -913,7 +1016,7 @@ Return only the reply text.
   }
 }
 
-/* ---------- SETTINGS AND LOCAL AI STATUS ---------- */
+/* ================= LOCAL AI STATUS ================= */
 
 async function checkLocalAI() {
   const status = $("ai-status");
@@ -921,10 +1024,13 @@ async function checkLocalAI() {
   try {
     const response = await fetch("http://localhost:11434/api/tags");
 
-    if (!response.ok) throw new Error("Ollama is not responding.");
+    if (!response.ok) {
+      throw new Error("Ollama is not responding.");
+    }
 
     const data = await response.json();
     const models = data.models || [];
+
     const modelExists = models.some(model =>
       model.name === OLLAMA_MODEL ||
       model.name.startsWith(`${OLLAMA_MODEL}:`)
@@ -938,10 +1044,16 @@ async function checkLocalAI() {
 
     return modelExists;
   } catch (error) {
-    if (status) status.textContent = "Not connected — start Ollama on this computer.";
+    if (status) {
+      status.textContent =
+        "Not connected — start Ollama on this computer.";
+    }
+
     return false;
   }
 }
+
+/* ================= PAUSE CONTROLS ================= */
 
 function initializePauseControls() {
   const pauseButton = $("pause-btn");
@@ -954,7 +1066,9 @@ function initializePauseControls() {
       pauseButton.textContent = paused ? "Resume" : "Pause";
     }
 
-    if (masterPause) masterPause.checked = paused;
+    if (masterPause) {
+      masterPause.checked = paused;
+    }
 
     setText(
       "pause-status",
@@ -966,7 +1080,9 @@ function initializePauseControls() {
       paused ? "Paused" : "Active"
     );
 
-    if (paused) window.WEDNESDAY_INTERRUPT();
+    if (paused) {
+      window.WEDNESDAY_INTERRUPT();
+    }
   }
 
   if (pauseButton) {
@@ -984,15 +1100,20 @@ function initializePauseControls() {
   updatePauseState(false);
 }
 
-/* ---------- SUPABASE ---------- */
+/* ================= OPTIONAL SUPABASE ================= */
 
 function getSupabaseConfig() {
   let url = "";
   let key = "";
 
   try {
-    if (typeof SUPABASE_URL !== "undefined") url = SUPABASE_URL;
-    if (typeof SUPABASE_ANON_KEY !== "undefined") key = SUPABASE_ANON_KEY;
+    if (typeof SUPABASE_URL !== "undefined") {
+      url = SUPABASE_URL;
+    }
+
+    if (typeof SUPABASE_ANON_KEY !== "undefined") {
+      key = SUPABASE_ANON_KEY;
+    }
   } catch (_) {}
 
   url = url || window.SUPABASE_URL || "";
@@ -1006,14 +1127,32 @@ function getSupabaseConfig() {
 
 function initializeSupabase() {
   const status = $("supabase-status");
+  const gate = $("auth-gate");
   const config = getSupabaseConfig();
+
+  /*
+   * LOCAL MODE:
+   * No Supabase URL/key means no login screen.
+   * The application opens directly.
+   */
 
   if (
     !config.url ||
     !config.key ||
     !window.supabase?.createClient
   ) {
-    if (status) status.textContent = "Not connected — check config.js.";
+    supabaseClient = null;
+    supabaseAuthReady = false;
+    window.WEDNESDAY_LOCAL_MODE = true;
+
+    if (gate) {
+      gate.style.display = "none";
+    }
+
+    if (status) {
+      status.textContent = "Optional — Supabase not connected.";
+    }
+
     return;
   }
 
@@ -1024,35 +1163,64 @@ function initializeSupabase() {
     );
 
     supabaseAuthReady = true;
+    window.WEDNESDAY_LOCAL_MODE = false;
 
-    if (status) status.textContent = "Supabase client initialized.";
+    if (status) {
+      status.textContent = "Supabase client initialized.";
+    }
 
     supabaseClient.auth.onAuthStateChange((_event, session) => {
       updateAuthInterface(session);
     });
 
-    supabaseClient.auth.getSession().then(({ data, error }) => {
-      if (error) throw error;
-      updateAuthInterface(data.session);
-    }).catch(error => {
-      console.error("Supabase session error:", error);
-    });
+    supabaseClient.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        updateAuthInterface(data.session);
+      })
+      .catch(error => {
+        console.error("Supabase session error:", error);
+      });
+
   } catch (error) {
     console.error("Supabase initialization error:", error);
-    if (status) status.textContent = "Supabase initialization failed.";
+
+    supabaseClient = null;
+    supabaseAuthReady = false;
+    window.WEDNESDAY_LOCAL_MODE = true;
+
+    if (gate) gate.style.display = "none";
+
+    if (status) {
+      status.textContent = "Supabase unavailable — using local mode.";
+    }
   }
 }
 
 function updateAuthInterface(session) {
   const gate = $("auth-gate");
-  const app = document.querySelector(".app-shell") ||
-              document.querySelector(".app");
 
-  if (gate) gate.style.display = session ? "none" : "";
-  if (app && gate) app.style.display = session ? "" : "none";
+  if (window.WEDNESDAY_LOCAL_MODE) {
+    if (gate) gate.style.display = "none";
+    return;
+  }
+
+  if (gate) {
+    gate.style.display = session ? "none" : "";
+  }
 }
 
+/* ================= AUTHENTICATION ================= */
+
 function initializeAuthentication() {
+  const gate = $("auth-gate");
+
+  // Local mode does not require login.
+  if (window.WEDNESDAY_LOCAL_MODE) {
+    if (gate) gate.style.display = "none";
+    return;
+  }
+
   const form = $("login-form");
   const logoutButton = $("logout-btn");
 
@@ -1060,10 +1228,10 @@ function initializeAuthentication() {
     form.addEventListener("submit", async event => {
       event.preventDefault();
 
-      if (!supabaseAuthReady || !supabaseClient) {
+      if (!supabaseClient || !supabaseAuthReady) {
         showStatus(
           "auth-message",
-          "Supabase is not configured. Check config.js and Supabase settings.",
+          "Supabase is not connected.",
           true
         );
         return;
@@ -1073,7 +1241,11 @@ function initializeAuthentication() {
       const password = $("login-password")?.value;
 
       if (!email || !password) {
-        showStatus("auth-message", "Enter your email and password.", true);
+        showStatus(
+          "auth-message",
+          "Enter your email and password.",
+          true
+        );
         return;
       }
 
@@ -1081,10 +1253,11 @@ function initializeAuthentication() {
       if (button) button.disabled = true;
 
       try {
-        const { error } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
+        const { error } =
+          await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
 
         if (error) throw error;
 
@@ -1110,17 +1283,11 @@ function initializeAuthentication() {
   }
 }
 
-/* ---------- SETTINGS FORM ---------- */
+/* ================= SETTINGS ================= */
 
 function initializeSettings() {
   const saveButton = $("save-config");
   const testButton = $("test-supabase");
-
-  const savedSettings = loadData(STORAGE_KEYS.settings, {});
-
-  if ($("supabase-url") && savedSettings.url) {
-    $("supabase-url").value = savedSettings.url;
-  }
 
   if (saveButton) {
     saveButton.addEventListener("click", () => {
@@ -1128,19 +1295,25 @@ function initializeSettings() {
       const key = $("supabase-key")?.value.trim() || "";
 
       if (!url || !key) {
-        showStatus("config-result", "Enter both values first.", true);
+        showStatus(
+          "config-result",
+          "Enter both values first.",
+          true
+        );
         return;
       }
 
       /*
-       * This saves settings only in this browser.
-       * It does not rewrite config.js or securely store secrets.
+       * Saves only in this browser.
+       * It does not change config.js.
+       * Do not enter service-role or secret keys here.
        */
+
       saveData(STORAGE_KEYS.settings, { url, key });
 
       showStatus(
         "config-result",
-        "Saved in this browser. Update config.js separately if required."
+        "Saved in this browser. This does not connect Supabase automatically."
       );
     });
   }
@@ -1151,23 +1324,33 @@ function initializeSettings() {
       const key = $("supabase-key")?.value.trim();
 
       if (!url || !key) {
-        showStatus("config-result", "Enter the Supabase URL and public key.", true);
+        showStatus(
+          "config-result",
+          "Enter the Supabase URL and public key.",
+          true
+        );
         return;
       }
 
       try {
-        const response = await fetch(`${url.replace(/\/$/, "")}/rest/v1/`, {
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`
+        const response = await fetch(
+          `${url.replace(/\/$/, "")}/rest/v1/`,
+          {
+            headers: {
+              apikey: key,
+              Authorization: `Bearer ${key}`
+            }
           }
-        });
+        );
 
         if (!response.ok) {
           throw new Error(`Supabase returned ${response.status}`);
         }
 
-        showStatus("config-result", "Supabase endpoint responded successfully.");
+        showStatus(
+          "config-result",
+          "Supabase endpoint responded successfully."
+        );
       } catch (error) {
         showStatus("config-result", error.message, true);
       }
@@ -1175,9 +1358,12 @@ function initializeSettings() {
   }
 }
 
-/* ---------- INITIALIZATION ---------- */
+/* ================= APPLICATION STARTUP ================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+  initializeSupabase();
+  initializeAuthentication();
+
   initializeNavigation();
   initializeTasks();
   initializeClients();
@@ -1188,11 +1374,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initializePauseControls();
   initializeSettings();
 
-  initializeSupabase();
-  initializeAuthentication();
-
   checkLocalAI();
   updateDashboard();
 
-  console.log("WEDNESDAY application initialized.");
+  console.log(
+    "WEDNESDAY initialized. Local mode:",
+    window.WEDNESDAY_LOCAL_MODE
+  );
 });
