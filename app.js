@@ -678,7 +678,8 @@ function renderDiscoveredLeads() {
               <td>${escapeHTML(lead.phone || "Not found")}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
-              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>\n              <td><span class="client-status">${lead.openingDateVerified ? "Verified" : "Not verified"}</span></td>
+              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
+              <td><span class="client-status">${lead.openingDateVerified ? "Verified" : "Not verified"}</span></td>
             </tr>`
           ).join("")}
         </tbody>
