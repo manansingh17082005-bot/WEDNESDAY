@@ -759,7 +759,7 @@ function renderDiscoveredLeads() {
     <p class="note">Search results are leads to review, not verified proof that a business is newly opened or wants your service. Missing phone/email fields are left blank.</p>
   `;
 
-  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);\n\n  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);
+  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);
 
   $("lead-select-all")?.addEventListener("change", event => {
     document.querySelectorAll(".lead-select:not(:disabled)").forEach(box => { box.checked = event.target.checked; });
