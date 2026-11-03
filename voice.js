@@ -6,11 +6,12 @@
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null, enabled = false, speaking = false, restarting = false;
   let restartTimer = null, finalText = "", lastSpoken = "";
+  let awaitingWakeCommand = false;
   const status = (message, state="idle") => {
     const el=$("wednesday-voice-status");
     if(el){el.textContent=message;el.dataset.state=state;}
     const btn=$("wednesday-handsfree");
-    if(btn){btn.textContent=enabled?"🎙 Hands-free is ON · Turn off":"🎙 Enable voice";btn.setAttribute("aria-pressed",String(enabled));btn.classList.toggle("voice-active",enabled);}
+    if(btn){btn.textContent=enabled?"🎙 Wake word is ON · Turn off":"🎙 Activate wake word";btn.setAttribute("aria-pressed",String(enabled));btn.classList.toggle("voice-active",enabled);}
   };
   const setState = s => window.WEDNESDAY_SET_STATE?.(s);
   function speak(text) {
@@ -48,7 +49,7 @@
     if(!Recognition){status("Voice input is not supported here. Please use Chrome or Edge.", "error");return false;}
     recognition=new Recognition();
     recognition.lang="en-IN";recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
-    recognition.onstart=()=>{restarting=false;if(enabled&&!speaking){status("Listening… talk naturally. Say “stop listening” to pause.","listening");setState("listening");}};
+    recognition.onstart=()=>{restarting=false;if(enabled&&!speaking){status("Wake word active. Say Hey Wednesday to talk, or stop listening to pause.","listening");setState("listening");}};
     recognition.onresult=e=>{
       let interim="";
       for(let i=e.resultIndex;i<e.results.length;i++){
@@ -58,9 +59,33 @@
       if(finalText.trim()){
         const heard=finalText.trim();finalText="";
         if(/^(stop listening|disable listening|go to sleep)$/i.test(heard)){disable();return;}
+        const wakeMatch=heard.match(/\b(?:hey|hi|hello)\s+wednesday\b[,.!?;:\s]*/i);
+        if(!awaitingWakeCommand){
+          if(!wakeMatch){
+            const el=$("wednesday-voice-status");
+            if(el)el.textContent="Wake phrase mode: say Hey Wednesday to talk.";
+            return;
+          }
+          const command=heard.slice(wakeMatch.index+wakeMatch[0].length).trim();
+          if(command){
+            try{recognition.stop();}catch(_){}
+            status("Heard your wake phrase. Processing your request…","busy");
+            submit(command);
+          }else{
+            awaitingWakeCommand=true;
+            try{recognition.stop();}catch(_){}
+            status("I'm listening. What would you like me to do?","listening");
+            speak("I'm listening. What would you like me to do?");
+          }
+          return;
+        }
+        awaitingWakeCommand=false;
         try{recognition.stop();}catch(_){}
         status("Heard: "+heard,"busy");submit(heard);
-      }else if(interim){const el=$("wednesday-voice-status");if(el)el.textContent="Hearing: "+interim;}
+      }else if(interim){
+        const el=$("wednesday-voice-status");
+        if(el)el.textContent=awaitingWakeCommand?"Listening for your request…":"Waiting for Hey Wednesday…";
+      }
     };
     recognition.onerror=e=>{
       restarting=false;
@@ -72,7 +97,7 @@
   }
   function enable(){
     if(!recognition&&!setupRecognition())return;
-    enabled=true;finalText="";status("Starting microphone…","listening");scheduleRestart();
+    enabled=true;finalText="";status("Starting microphone and wake word…","listening");scheduleRestart();
     // Start immediately inside the click gesture for browser permission.
     try{restarting=true;recognition.start();}catch(_){restarting=false;scheduleRestart();}
   }
@@ -83,10 +108,10 @@
   }
   function addControls(){
     const form=$("chat-form");if(!form||$("wednesday-handsfree"))return;
-    const btn=document.createElement("button");btn.type="button";btn.id="wednesday-handsfree";btn.className="secondary-btn handsfree-button";btn.textContent="🎙 Enable voice";
+    const btn=document.createElement("button");btn.type="button";btn.id="wednesday-handsfree";btn.className="secondary-btn handsfree-button";btn.textContent="🎙 Activate wake word";
     btn.addEventListener("click",()=>enabled?disable():enable());
     const send=form.querySelector('button[type="submit"]');if(send)form.insertBefore(btn,send);else form.append(btn);
-    const note=document.createElement("small");note.id="wednesday-voice-status";note.className="voice-status";note.setAttribute("role","status");note.setAttribute("aria-live","polite");note.textContent="Enable voice once and allow microphone access. Replies will be spoken aloud.";
+    const note=document.createElement("small");note.id="wednesday-voice-status";note.className="voice-status";note.setAttribute("role","status");note.setAttribute("aria-live","polite");note.textContent="Activate once and allow microphone access. Then say Hey Wednesday to start a voice request. Replies are spoken aloud.";
     form.insertAdjacentElement("afterend",note);
   }
   document.addEventListener("DOMContentLoaded",addControls);
