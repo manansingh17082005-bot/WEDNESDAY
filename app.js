@@ -574,7 +574,7 @@ function renderClients() {
   }
 
   table.innerHTML = filtered.map(client => {
-    const digits = String(client.phone || "").replace(/\\D/g, "");
+    const digits = String(client.phone || "").replace(/\D/g, "");
     const whatsapp = digits.length >= 10 && digits.length <= 15
       ? `<a class="secondary-btn client-whatsapp" href="https://wa.me/${digits}" target="_blank" rel="noopener noreferrer">Open WhatsApp</a>`
       : '<span class="muted">Add valid phone</span>';
@@ -702,7 +702,7 @@ function renderDiscoveredLeads() {
       const lead = discoveredLeads[index];
       if (!lead || lead.added) return;
       const duplicate = clients.some(client =>
-        (lead.phone && String(client.phone || client.contact || "").replace(/\\D/g, "").endsWith(lead.phone.replace(/\\D/g, "").slice(-10))) ||
+        (lead.phone && String(client.phone || client.contact || "").replace(/\D/g, "").endsWith(lead.phone.replace(/\D/g, "").slice(-10))) ||
         (client.name || "").trim().toLowerCase() === lead.name.trim().toLowerCase()
       );
       if (duplicate) {
