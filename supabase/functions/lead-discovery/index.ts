@@ -27,8 +27,8 @@ function extractPublicEmail(text: string): string {
 
 function extractPublicWhatsApp(text: string): string {
   const patterns = [
-    /(?:https?:\\/\\/)?(?:api\\.)?wa\\.me\\/(?:send\\/)?([0-9]{10,15})/i,
-    /api\\.whatsapp\\.com\\/send\\?[^\\s"'<>]*phone=([0-9]{10,15})/i
+    /(?:https?:\/\/)?(?:api\.)?wa\.me\/(?:send\/)?([0-9]{10,15})/i,
+    /api\.whatsapp\.com\/send\?[^\s"'<>]*phone=([0-9]{10,15})/i
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -121,6 +121,8 @@ serve(async (request) => {
         name: title,
         company: title,
         phone,
+        whatsappNumber,
+        whatsappStatus: whatsappNumber ? "Public WhatsApp link found" : "Not found / not verified",
         email,
         address: "",
         website: url,
