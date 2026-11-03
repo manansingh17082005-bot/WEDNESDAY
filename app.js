@@ -653,6 +653,77 @@ function getCheckedValues(name) {
   ].map(input => input.value);
 }
 
+function extractWhatsAppNumber(lead) {
+  const text = [lead.website, lead.snippet, lead.phone].filter(Boolean).join(" ");
+  const patterns = [
+    /(?:https?:\/\/)?(?:api\.)?wa\.me\/(?:send\/)?([0-9]{10,15})/i,
+    /api\.whatsapp\.com\/send\?[^\s"'<>]*phone=([0-9]{10,15})/i
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  return "";
+}
+
+function getLeadExcelRows() {
+  return discoveredLeads.map(lead => {
+    const whatsappNumber = lead.whatsappNumber || extractWhatsAppNumber(lead);
+    return {
+      "Business Name": lead.name || "",
+      "Contact Person": lead.contactPerson || "",
+      "WhatsApp Number": whatsappNumber ? "+" + whatsappNumber : "",
+      "WhatsApp Status": whatsappNumber ? "Public WhatsApp link found" : "Not found / not verified",
+      "Phone Number": lead.phone || "",
+      "Email": lead.email || "",
+      "Website": lead.website || "",
+      "City": $("lead-location")?.value.trim() || "",
+      "Source URL": lead.website || ""
+    };
+  });
+}
+
+function downloadLeadExcel() {
+  if (!discoveredLeads.length) {
+    showStatus("lead-search-status", "Search for leads before creating an Excel report.", true);
+    return;
+  }
+  if (!window.XLSX) {
+    showStatus("lead-search-status", "Excel library did not load. Refresh the page and try again.", true);
+    return;
+  }
+
+  const rows = getLeadExcelRows();
+  const workbook = XLSX.utils.book_new();
+  const leadsSheet = XLSX.utils.json_to_sheet(rows);
+  leadsSheet["!cols"] = [
+    { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 27 }, { wch: 20 },
+    { wch: 30 }, { wch: 38 }, { wch: 18 }, { wch: 42 }
+  ];
+  leadsSheet["!autofilter"] = { ref: leadsSheet["!ref"] || "A1:I1" };
+  leadsSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+  XLSX.utils.book_append_sheet(workbook, leadsSheet, "Lead List");
+
+  const summary = [
+    { Field: "Generated", Value: new Date().toLocaleString() },
+    { Field: "Business type", Value: $("lead-business-type")?.value.trim() || "" },
+    { Field: "Location", Value: $("lead-location")?.value.trim() || "" },
+    { Field: "Keywords", Value: $("lead-keywords")?.value.trim() || "" },
+    { Field: "Total results", Value: rows.length },
+    { Field: "WhatsApp links found", Value: rows.filter(row => row["WhatsApp Number"]).length },
+    { Field: "WhatsApp verification", Value: "Only publicly visible WhatsApp links are labelled as found. Other phone numbers are not assumed to be WhatsApp." },
+    { Field: "Source", Value: "Tavily public web search. Verify details before contacting." }
+  ];
+  const summarySheet = XLSX.utils.json_to_sheet(summary);
+  summarySheet["!cols"] = [{ wch: 28 }, { wch: 100 }];
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "Search Summary");
+
+  const safeLocation = ($("lead-location")?.value || "Leads").trim().replace(/[^a-z0-9_-]+/gi, "_");
+  const safeType = ($("lead-business-type")?.value || "Business").trim().replace(/[^a-z0-9_-]+/gi, "_");
+  XLSX.writeFile(workbook, `WEDNESDAY_Leads_${safeType}_${safeLocation}.xlsx`);
+  showStatus("lead-search-status", "Your Excel lead report is ready. Check your Downloads folder.");
+}
+
 function renderDiscoveredLeads() {
   const output = $("lead-search-results");
   if (!output) return;
@@ -688,7 +759,7 @@ function renderDiscoveredLeads() {
     <p class="note">Search results are leads to review, not verified proof that a business is newly opened or wants your service. Missing phone/email fields are left blank.</p>
   `;
 
-  $("lead-select-all")?.addEventListener("change", event => {
+  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);\n\n  $("lead-select-all")?.addEventListener("change", event => {
     document.querySelectorAll(".lead-select:not(:disabled)").forEach(box => { box.checked = event.target.checked; });
   });
 
@@ -777,7 +848,7 @@ function initializeLeadGeneration() {
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
         renderDiscoveredLeads();
-        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Review them and add selected records to Client CRM.`);
+        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Preparing your Excel report…`);\n        if (discoveredLeads.length && window.XLSX) {\n          try { downloadLeadExcel(); } catch (exportError) { console.warn("Automatic Excel download was blocked:", exportError); }\n        }
       } catch (error) {
         console.error("Live lead search error:", error);
         showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
