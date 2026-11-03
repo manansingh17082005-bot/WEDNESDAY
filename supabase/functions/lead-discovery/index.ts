@@ -57,15 +57,27 @@ serve(async (request) => {
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400);
 
-    const placeQueries = [
+    const selectedSources = sources.length ? sources : ["Google Maps", "Google Search"];
+    const placeQueries = selectedSources.includes("Google Maps") ? [
       `${businessType} in ${location}`,
       keywords ? `${businessType} ${keywords} in ${location}` : `new ${businessType} in ${location}`,
-    ];
-    const webQueries = [
-      `newly opened ${businessType} ${location} opening 2025 2026`,
-      `site:instagram.com ${businessType} ${location}`,
-      `site:facebook.com ${businessType} ${location} business`,
-    ];
+    ] : [];
+    const webQueries: string[] = [];
+    if (selectedSources.includes("Google Search")) {
+      webQueries.push(`newly opened ${businessType} ${location} opening 2025 2026`);
+    }
+    if (selectedSources.includes("Instagram")) {
+      webQueries.push(`site:instagram.com ${businessType} ${location}`);
+    }
+    if (selectedSources.includes("Facebook")) {
+      webQueries.push(`site:facebook.com ${businessType} ${location} business`);
+    }
+    if (selectedSources.includes("Business Websites")) {
+      webQueries.push(`${businessType} ${location} official website contact ${keywords}`);
+    }
+    if (!placeQueries.length && !webQueries.length) {
+      return json({ error: "Select at least one supported search source." }, 400);
+    }
 
     const [placeResponses, webResponses] = await Promise.all([
       Promise.all(placeQueries.map(async (q) => {
