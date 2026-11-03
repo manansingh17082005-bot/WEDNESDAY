@@ -49,7 +49,8 @@ let activeRequestController = null;
 let activeRequestId = 0;
 
 let tasks = loadData(STORAGE_KEYS.tasks, []);
-let clients = loadData(STORAGE_KEYS.clients, []);\nlet discoveredLeads = [];
+let clients = loadData(STORAGE_KEYS.clients, []);
+let discoveredLeads = [];
 
 let supabaseClient = null;
 let supabaseAuthReady = false;
@@ -1179,8 +1180,8 @@ function getSupabaseConfig() {
     }
   } catch (_) {}
 
-  url = url || window.SUPABASE_URL || "";
-  key = key || window.SUPABASE_ANON_KEY || "";
+  url = url || window.SUPABASE_URL || window.WEDNESDAY_CONFIG?.supabaseUrl || "";
+  key = key || window.SUPABASE_ANON_KEY || window.WEDNESDAY_CONFIG?.supabaseAnonKey || "";
 
   return {
     url: String(url).trim(),
