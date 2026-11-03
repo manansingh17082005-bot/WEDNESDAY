@@ -25,6 +25,18 @@ function extractPublicEmail(text: string): string {
   return text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
 }
 
+function extractPublicWhatsApp(text: string): string {
+  const patterns = [
+    /(?:https?:\\/\\/)?(?:api\\.)?wa\\.me\\/(?:send\\/)?([0-9]{10,15})/i,
+    /api\\.whatsapp\\.com\\/send\\?[^\\s"'<>]*phone=([0-9]{10,15})/i
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  return "";
+}
+
 function cleanName(title: string): string {
   return title.replace(/\s*[-|•].*$/, "").replace(/\s*\(.*\)$/, "").trim().slice(0, 120);
 }
@@ -100,7 +112,7 @@ serve(async (request) => {
 
       const combined = `${title} ${content} ${url}`;
       const phone = extractPublicPhone(combined);
-      const email = extractPublicEmail(combined);
+      const email = extractPublicEmail(combined);\n      const whatsappNumber = extractPublicWhatsApp(combined);
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
