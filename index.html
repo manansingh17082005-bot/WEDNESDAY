@@ -305,19 +305,30 @@
       <!-- CLIENT CRM -->
       <section class="page" id="page-clients">
         <div class="section-heading">
-          <div><span class="eyebrow">RELATIONSHIP MANAGEMENT</span><h2>Client CRM</h2><p class="muted">Keep client details, requirements and follow-ups together.</p></div>
+          <div><span class="eyebrow">RELATIONSHIP MANAGEMENT</span><h2>Client CRM</h2><p class="muted">Add prospects, track follow-ups and open a WhatsApp chat when you're ready.</p></div>
         </div>
         <div class="panel">
+          <div class="panel-head"><div><span class="eyebrow">ADD A RECORD</span><h3>New client</h3></div></div>
           <form id="client-form" class="form-grid">
-            <input id="client-name" placeholder="Client name" required>
-            <input id="client-contact" placeholder="Email or phone">
-            <input id="client-service" placeholder="Service / requirement">
+            <input id="client-name" placeholder="Client / contact name" aria-label="Client or contact name" required>
+            <input id="client-company" placeholder="Company / business" aria-label="Company or business">
+            <input id="client-phone" type="tel" placeholder="WhatsApp number (with country code)" aria-label="WhatsApp phone number">
+            <input id="client-email" type="email" placeholder="Email address" aria-label="Email address">
+            <input id="client-service" placeholder="Service / requirement" aria-label="Service or requirement">
+            <select id="client-status" aria-label="Client status">
+              <option value="New">New</option><option value="Contacted">Contacted</option><option value="Interested">Interested</option><option value="Follow-up">Follow-up</option><option value="Client">Converted to client</option><option value="Not interested">Not interested</option>
+            </select>
             <button class="primary-btn" type="submit">Add client</button>
           </form>
+          <p id="client-status-message" class="muted" role="status" aria-live="polite">Phone numbers should include country code, for example 919876543210.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><span class="eyebrow">YOUR CONTACTS</span><h3>Client list</h3></div><span class="muted" id="client-total">Saved in this browser</span></div>
+          <input id="client-search" type="search" placeholder="Search name, company, phone, service or status…" aria-label="Search clients">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>CLIENT</th><th>CONTACT</th><th>REQUIREMENT</th><th>STATUS</th></tr></thead>
-              <tbody id="client-table"><tr><td colspan="4" class="empty">No clients added yet. Add your first client above.</td></tr></tbody>
+              <thead><tr><th>CONTACT</th><th>COMPANY</th><th>PHONE</th><th>EMAIL</th><th>SERVICE</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+              <tbody id="client-table"><tr><td colspan="7" class="empty">No clients added yet. Add your first client above.</td></tr></tbody>
             </table>
           </div>
         </div>
