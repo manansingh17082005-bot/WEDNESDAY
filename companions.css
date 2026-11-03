@@ -1,0 +1,22 @@
+/* WEDNESDAY companion selector */
+.companion-picker{width:100%;padding:18px;background:#fffdf8;border:2px solid #f0d9bd;border-radius:22px;box-shadow:0 5px 0 #f1dfca}
+.companion-picker-heading h3{margin:7px 0 5px;color:#49363a;font:800 18px Manrope,sans-serif}
+.companion-picker-heading p{margin:0 0 16px;color:#8e7778;font-size:11px;line-height:1.5}
+.companion-options{display:grid;gap:10px}
+.companion-option{width:100%;display:flex;align-items:center;gap:11px;padding:12px;text-align:left;border:2px solid #f0d9c4;border-radius:16px;background:#fffaf2;color:#49363a;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.companion-option:hover{transform:translateY(-2px);border-color:#eda18b}
+.companion-option.is-selected{border-color:#ed8068;background:#fff0e6;box-shadow:0 3px 0 #f0d2bd}
+.companion-avatar{width:49px;height:49px;flex:0 0 49px;display:grid;place-items:center;border-radius:15px;font-size:28px}
+.shinchan-avatar{background:#ffe0c9}.himawari-avatar{background:#fff0b9}.shiro-avatar{background:#e6f3ff}
+.companion-option-copy{min-width:0;display:grid;gap:4px}
+.companion-option-copy strong{font:800 13px Manrope,sans-serif}
+.companion-option-copy small{font-size:10px;color:#8e7778}
+.companion-check{margin-left:auto;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#e8f4e8;color:#53835d;font-size:12px;opacity:0}
+.companion-option.is-selected .companion-check{opacity:1}
+.companion-detail{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;padding:11px 12px;border-radius:12px;background:#fff2e4;color:#5b4142}
+.companion-detail strong{font-size:11px}.companion-detail span{font-size:10px;color:#8b7070;text-align:right}
+.companion-art-note{margin:12px 0 0;color:#9b8580;font-size:9px;line-height:1.5}
+#active-companion-avatar{background:#ffe2c9;color:#67443f;font-size:23px}
+.chat-header>div:nth-child(2){min-width:0}
+@media(max-width:1050px){.companion-picker{max-width:100%}.companion-options{grid-template-columns:repeat(3,minmax(0,1fr))}.companion-option{flex-direction:column;text-align:center;align-items:center}.companion-check{margin:0}.companion-option-copy small{min-height:25px}}
+@media(max-width:650px){.companion-options{grid-template-columns:1fr}.companion-option{flex-direction:row;text-align:left;align-items:center}.companion-check{margin-left:auto}.companion-option-copy small{min-height:0}}
