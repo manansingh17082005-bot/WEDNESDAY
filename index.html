@@ -349,6 +349,12 @@
             <div><span class="eyebrow">STEP 01</span><h3>Choose your prospect</h3></div>
           </div>
           <div class="lead-form-grid">
+            <label>Choose saved client (optional)
+              <select id="outreach-client-select"><option value="">Enter a new prospect below</option></select>
+            </label>
+            <label>WhatsApp number (include country code)
+              <input id="outreach-phone" type="tel" placeholder="919876543210">
+            </label>
             <label>Business / contact name
               <input id="outreach-business" placeholder="Example: ABC Cafe">
             </label>
@@ -401,6 +407,7 @@
           <textarea id="outreach-draft" rows="9" placeholder="Your personalised outreach draft will appear here. Edit it before approving."></textarea>
           <div class="button-row">
             <button type="button" class="primary-btn" id="outreach-copy-btn">Copy approved draft</button>
+            <button type="button" class="secondary-btn" id="outreach-whatsapp-btn">Open WhatsApp with message ↗</button>
           </div>
           <p class="note">Copying a draft does not send it. You must open the selected channel and send the message yourself. Automatic sending is disabled.</p>
         </div>
