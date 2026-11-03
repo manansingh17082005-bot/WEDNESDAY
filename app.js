@@ -850,7 +850,10 @@ function initializeLeadGeneration() {
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
         renderDiscoveredLeads();
-        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Preparing your Excel report…`);\n        if (discoveredLeads.length && window.XLSX) {\n          try { downloadLeadExcel(); } catch (exportError) { console.warn("Automatic Excel download was blocked:", exportError); }\n        }
+        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Preparing your Excel report…`);
+        if (discoveredLeads.length && window.XLSX) {
+          try { downloadLeadExcel(); } catch (exportError) { console.warn("Automatic Excel download was blocked:", exportError); }
+        }
       } catch (error) {
         console.error("Live lead search error:", error);
         showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
