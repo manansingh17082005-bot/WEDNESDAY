@@ -736,17 +736,18 @@ function renderDiscoveredLeads() {
   output.innerHTML = `
     <div class="lead-results-toolbar">
       <label><input type="checkbox" id="lead-select-all"> Select all</label>
-      <button type="button" class="primary-btn compact" id="lead-add-selected">Add selected to Client CRM</button>
+      <div class="button-row"><button type="button" class="secondary-btn" id="lead-export-excel">Download Excel (.xlsx) ↓</button><button type="button" class="primary-btn compact" id="lead-add-selected">Add selected to Client CRM</button></div>
     </div>
     <div class="table-wrap">
       <table class="lead-table">
-        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>OPENING DATE</th></tr></thead>
+        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>WHATSAPP</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>OPENING DATE</th></tr></thead>
         <tbody>
           ${discoveredLeads.map((lead, index) => `
             <tr>
               <td><input type="checkbox" class="lead-select" data-lead-index="${index}" ${lead.added ? "disabled" : ""}></td>
               <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
               <td>${escapeHTML(lead.phone || "Not found")}</td>
+              <td>${escapeHTML(lead.whatsappNumber ? "+" + lead.whatsappNumber : "Not found / not verified")}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
               <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
@@ -759,7 +760,9 @@ function renderDiscoveredLeads() {
     <p class="note">Search results are leads to review, not verified proof that a business is newly opened or wants your service. Missing phone/email fields are left blank.</p>
   `;
 
-  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);\n\n  $("lead-select-all")?.addEventListener("change", event => {
+  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);\n\n  $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);
+
+  $("lead-select-all")?.addEventListener("change", event => {
     document.querySelectorAll(".lead-select:not(:disabled)").forEach(box => { box.checked = event.target.checked; });
   });
 
