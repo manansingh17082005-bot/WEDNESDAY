@@ -48,6 +48,7 @@
     aside.querySelectorAll("[data-character]").forEach(b=>b.addEventListener("click",()=>setActiveCharacter(b.dataset.character)));
     setActiveCharacter(activeId);
     const scene=document.getElementById("buddy-scene");
+    activateMovement(scene);
     document.addEventListener("mousemove",e=>{
       if(!scene)return;
       const r=scene.getBoundingClientRect(),x=(e.clientX-(r.left+r.width/2))/(r.width/2),y=(e.clientY-(r.top+r.height/2))/(r.height/2);
@@ -56,6 +57,53 @@
     },{passive:true});
     document.addEventListener("mouseleave",()=>{if(scene){scene.style.setProperty("--look-x","0px");scene.style.setProperty("--look-y","0px");}});
   }
+
+  // Draggable companions with gentle autonomous wandering.
+  function activateMovement(scene) {
+    if (!scene || scene.dataset.movementReady) return;
+    scene.dataset.movementReady = "true";
+    const stage = document.getElementById("wednesday-stage");
+    let dragging = null, startX = 0, startY = 0, baseX = 0, baseY = 0;
+    let wander = 0, direction = 1, last = 0;
+    const getActive = () => scene.querySelector('.buddy-art[style*="--active-art"]') ||
+      scene.querySelector('.shinchan-art, .himawari-art, .shiro-art');
+    scene.querySelectorAll(".buddy-art").forEach(art => {
+      art.style.touchAction = "none";
+      art.style.cursor = "grab";
+      art.addEventListener("pointerdown", e => {
+        if (art.offsetParent === null) return;
+        dragging = art; startX = e.clientX; startY = e.clientY;
+        baseX = Number(art.dataset.dragX || 0); baseY = Number(art.dataset.dragY || 0);
+        art.setPointerCapture(e.pointerId); art.style.cursor = "grabbing";
+        art.style.animationPlayState = "paused";
+        e.preventDefault();
+      });
+      art.addEventListener("pointermove", e => {
+        if (dragging !== art) return;
+        const x = Math.max(-scene.clientWidth * .38, Math.min(scene.clientWidth * .38, baseX + e.clientX - startX));
+        const y = Math.max(-35, Math.min(12, baseY + e.clientY - startY));
+        art.dataset.dragX = x; art.dataset.dragY = y;
+        art.style.setProperty("--drag-x", x + "px");
+        art.style.setProperty("--drag-y", y + "px");
+      });
+      const finish = () => { if (dragging === art) { dragging = null; art.style.cursor = "grab"; art.style.animationPlayState = ""; } };
+      art.addEventListener("pointerup", finish); art.addEventListener("pointercancel", finish);
+    });
+    function stroll(now) {
+      if (!last) last = now;
+      const dt = Math.min((now-last)/1000, .05); last = now;
+      if (!dragging && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        wander += direction * dt * 10;
+        if (wander > 24 || wander < -24) direction *= -1;
+        scene.style.setProperty("--wander-x", wander + "px");
+      }
+      requestAnimationFrame(stroll);
+    }
+    requestAnimationFrame(stroll);
+    scene.addEventListener("pointerenter", () => scene.classList.add("buddy-hovered"));
+    scene.addEventListener("pointerleave", () => scene.classList.remove("buddy-hovered"));
+  }
+
   const originalFetch=window.fetch.bind(window);
   window.fetch=function(input,init){
     const url=typeof input==="string"?input:input&&input.url;
