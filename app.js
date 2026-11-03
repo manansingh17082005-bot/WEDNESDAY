@@ -49,7 +49,7 @@ let activeRequestController = null;
 let activeRequestId = 0;
 
 let tasks = loadData(STORAGE_KEYS.tasks, []);
-let clients = loadData(STORAGE_KEYS.clients, []);
+let clients = loadData(STORAGE_KEYS.clients, []);\nlet discoveredLeads = [];
 
 let supabaseClient = null;
 let supabaseAuthReady = false;
@@ -652,6 +652,86 @@ function getCheckedValues(name) {
   ].map(input => input.value);
 }
 
+function renderDiscoveredLeads() {
+  const output = $("lead-search-results");
+  if (!output) return;
+
+  if (!discoveredLeads.length) {
+    output.innerHTML = '<div class="empty-state-icon">⌕</div><h3>No leads loaded yet</h3><p>Run a live search to discover public business listings.</p>';
+    return;
+  }
+
+  output.innerHTML = `
+    <div class="lead-results-toolbar">
+      <label><input type="checkbox" id="lead-select-all"> Select all</label>
+      <button type="button" class="primary-btn compact" id="lead-add-selected">Add selected to Client CRM</button>
+    </div>
+    <div class="table-wrap">
+      <table class="lead-table">
+        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>EMAIL</th><th>SOURCE</th><th>CHECK</th></tr></thead>
+        <tbody>
+          ${discoveredLeads.map((lead, index) => `
+            <tr>
+              <td><input type="checkbox" class="lead-select" data-lead-index="${index}" ${lead.added ? "disabled" : ""}></td>
+              <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
+              <td>${escapeHTML(lead.phone || "Not found")}</td>
+              <td>${escapeHTML(lead.email || "Not found")}</td>
+              <td>${escapeHTML(lead.source || "Web search")}</td>
+              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
+            </tr>`
+          ).join("")}
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Search results are leads to review, not verified proof that a business is newly opened or wants your service. Missing phone/email fields are left blank.</p>
+  `;
+
+  $("lead-select-all")?.addEventListener("change", event => {
+    document.querySelectorAll(".lead-select:not(:disabled)").forEach(box => { box.checked = event.target.checked; });
+  });
+
+  $("lead-add-selected")?.addEventListener("click", () => {
+    const indexes = [...document.querySelectorAll(".lead-select:checked")].map(box => Number(box.dataset.leadIndex));
+    if (!indexes.length) {
+      showStatus("lead-search-status", "Select at least one lead first.", true);
+      return;
+    }
+
+    let added = 0;
+    indexes.forEach(index => {
+      const lead = discoveredLeads[index];
+      if (!lead || lead.added) return;
+      const duplicate = clients.some(client =>
+        (lead.phone && String(client.phone || client.contact || "").replace(/\\D/g, "").endsWith(lead.phone.replace(/\\D/g, "").slice(-10))) ||
+        (client.name || "").trim().toLowerCase() === lead.name.trim().toLowerCase()
+      );
+      if (duplicate) {
+        lead.added = true;
+        return;
+      }
+      clients.unshift({
+        id: createId(),
+        name: lead.name,
+        company: lead.company || lead.name,
+        phone: lead.phone || "",
+        email: lead.email || "",
+        service: $("lead-service-summary")?.textContent || getCheckedValues("lead-service").join(", "),
+        status: "New",
+        source: lead.source,
+        website: lead.website,
+        createdAt: new Date().toISOString()
+      });
+      lead.added = true;
+      added++;
+    });
+
+    saveData(STORAGE_KEYS.clients, clients);
+    renderClients();
+    renderDiscoveredLeads();
+    showStatus("lead-search-status", `${added} new lead(s) added to Client CRM. Duplicates were skipped.`);
+  });
+}
+
 function initializeLeadGeneration() {
   const searchButton = $("lead-search-btn");
   const clearButton = $("lead-clear-btn");
@@ -665,103 +745,40 @@ function initializeLeadGeneration() {
 
       const services = getCheckedValues("lead-service");
       const sources = getCheckedValues("lead-source");
-
       const businessType = $("lead-business-type")?.value.trim();
       const location = $("lead-location")?.value.trim();
       const keywords = $("lead-keywords")?.value.trim();
-      const limit = $("lead-limit")?.value || "20";
+      const limit = Number($("lead-limit")?.value || 25);
 
-      if (!services.length) {
-        showStatus(
-          "lead-search-status",
-          "Select at least one service.",
-          true
-        );
+      if (!services.length || !businessType || !location) {
+        showStatus("lead-search-status", "Choose a service and enter a business type and location.", true);
         return;
       }
 
-      if (!businessType || !location) {
-        showStatus(
-          "lead-search-status",
-          "Enter a business type and location.",
-          true
-        );
-        return;
-      }
-
-      if (!sources.length) {
-        showStatus(
-          "lead-search-status",
-          "Select at least one source.",
-          true
-        );
+      if (!supabaseClient || !supabaseAuthReady) {
+        showStatus("lead-search-status", "Live lead search needs your WEDNESDAY account connected. Sign in first, then configure the search provider as described in setup.", true);
         return;
       }
 
       searchButton.disabled = true;
-
-      showStatus(
-        "lead-search-status",
-        "WEDNESDAY is preparing your search plan..."
-      );
-
-      const prompt = `
-Create a practical lead-generation search plan.
-
-Services offered:
-${services.join(", ")}
-
-Target business type:
-${businessType}
-
-Target location:
-${location}
-
-Additional keywords:
-${keywords || "Suggest relevant keywords."}
-
-Preferred sources:
-${sources.join(", ")}
-
-Desired lead target:
-${limit}
-
-Return:
-1. Search strategy.
-2. Search queries for each selected source.
-3. Useful filters.
-4. Lead qualification checklist.
-5. Suggested spreadsheet columns.
-6. A manual research workflow.
-
-Do not invent businesses, names, phone numbers, emails,
-social media handles or verified search results.
-
-Return search queries and research instructions only.
-`;
+      showStatus("lead-search-status", "Searching public web listings for real business leads…");
 
       try {
-        const result = await askWednesdayOnce(prompt);
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        if (!sessionData?.session) throw new Error("Please sign in to WEDNESDAY before searching.");
 
-        const output = $("lead-search-results");
+        const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
+          body: { businessType, location, keywords, limit, sources, services }
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
 
-        if (output) {
-          output.textContent = result;
-          output.style.whiteSpace = "pre-wrap";
-        }
-
-        showStatus(
-          "lead-search-status",
-          "Search plan generated. These are suggestions, not verified live leads."
-        );
+        discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
+        renderDiscoveredLeads();
+        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Review them and add selected records to Client CRM.`);
       } catch (error) {
-        console.error(error);
-
-        showStatus(
-          "lead-search-status",
-          `Could not generate the plan: ${error.message}`,
-          true
-        );
+        console.error("Live lead search error:", error);
+        showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
       } finally {
         searchButton.disabled = false;
       }
@@ -770,20 +787,14 @@ Return search queries and research instructions only.
 
   if (clearButton) {
     clearButton.addEventListener("click", () => {
-      [
-        "lead-business-type",
-        "lead-location",
-        "lead-keywords"
-      ].forEach(id => {
-        if ($(id)) $(id).value = "";
-      });
-
-      const output = $("lead-search-results");
-      if (output) output.textContent = "";
-
+      ["lead-business-type", "lead-location", "lead-keywords"].forEach(id => { if ($(id)) $(id).value = ""; });
+      discoveredLeads = [];
+      renderDiscoveredLeads();
       showStatus("lead-search-status", "Search form cleared.");
     });
   }
+
+  renderDiscoveredLeads();
 }
 
 /* ================= OUTREACH STUDIO ================= */
