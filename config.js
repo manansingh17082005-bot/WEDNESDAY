@@ -1,7 +1,10 @@
-// Public client configuration only. Never put AI provider secrets or Supabase service-role keys here.
+// WEDNESDAY personal local mode.
+// Supabase sign-in is disabled for this personal workspace.
+// Live cloud lead discovery requires Supabase authentication and will be unavailable
+// until a secure sign-in flow is restored.
 window.WEDNESDAY_CONFIG = {
-  supabaseUrl: "https://bdidzrlljkkssamzahxz.supabase.co",
-  supabaseAnonKey: "sb_publishable_y9UZ-h_9JaeV-VLSqiRX6g_kIgUHtm4"
+  supabaseUrl: "",
+  supabaseAnonKey: ""
 };
 
 // Load the companion selector before app.js initializes.
