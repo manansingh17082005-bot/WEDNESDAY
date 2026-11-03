@@ -112,7 +112,8 @@ serve(async (request) => {
 
       const combined = `${title} ${content} ${url}`;
       const phone = extractPublicPhone(combined);
-      const email = extractPublicEmail(combined);\n      const whatsappNumber = extractPublicWhatsApp(combined);
+      const email = extractPublicEmail(combined);
+      const whatsappNumber = extractPublicWhatsApp(combined);
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
