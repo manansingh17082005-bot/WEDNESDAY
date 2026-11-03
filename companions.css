@@ -48,3 +48,13 @@
 .handsfree-button.voice-active{background:#285343;border-color:#4caa82;color:#d6ffec}
 .voice-status{display:block;padding:7px 4px;color:var(--muted,#8b91a5);font-size:11px}
 @media(max-width:1050px){.companion-picker{max-width:100%}}
+
+/* Classic Shinchan and Himawari artwork slots (transparent PNG/WebP assets) */
+.shinchan-art,.himawari-art{width:100%;height:184px;display:none;align-items:end;justify-content:center}
+.classic-character-image{display:block;width:100%;height:184px;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 5px 3px #8b675044);transform:translate(var(--look-x),var(--look-y));transition:transform .16s ease-out;animation:classic-character-float 3s ease-in-out infinite}
+.character-image-placeholder{max-width:150px;padding:10px;border:1px dashed #bd8f7e;border-radius:12px;background:#fff8ee;color:#795d58;text-align:center;font-size:11px;line-height:1.5}
+.companion-avatar img{width:100%;height:100%;padding:2px;object-fit:contain}
+@keyframes classic-character-float{0%,100%{translate:0 0}50%{translate:0 -4px}}
+#wednesday-stage[data-state="speaking"] .classic-character-image{animation:classic-character-talk .22s ease-in-out infinite alternate}
+@keyframes classic-character-talk{to{translate:0 -2px;scale:1.015}}
+#wednesday-stage[data-state="thinking"] .classic-character-image{filter:drop-shadow(0 5px 3px #8b675044) saturate(.88)}
