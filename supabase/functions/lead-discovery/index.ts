@@ -1,6 +1,6 @@
 // WEDNESDAY lead discovery — Supabase Edge Function
-// Required Supabase secret: SERPER_API_KEY
-// Deploy with JWT verification enabled. Never put the Serper key in browser code.
+// Required Supabase secret: TAVILY_API_KEY
+// Tavily key stays server-side. Use basic search to conserve free monthly credits.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
@@ -18,8 +18,7 @@ const json = (body: unknown, status = 200) =>
 
 function extractPublicPhone(text: string): string {
   const match = text.match(/(?:\+?91[\s-]?)?([6-9]\d{9})/);
-  if (!match) return "";
-  return `+91 ${match[1]}`;
+  return match ? \`+91 \${match[1]}\` : "";
 }
 
 function extractPublicEmail(text: string): string {
@@ -27,23 +26,16 @@ function extractPublicEmail(text: string): string {
 }
 
 function cleanName(title: string): string {
-  return title
-    .replace(/\s*[-|•].*$/, "")
-    .replace(/\s*\(.*\)$/, "")
-    .trim()
-    .slice(0, 120);
+  return title.replace(/\s*[-|•].*$/, "").replace(/\s*\(.*\)$/, "").trim().slice(0, 120);
 }
 
 serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Use POST." }, 405);
 
-  const apiKey = Deno.env.get("SERPER_API_KEY");
-  if (!apiKey) return json({ error: "Lead search is not configured. Add SERPER_API_KEY to Supabase Edge Function secrets." }, 503);
+  const apiKey = Deno.env.get("TAVILY_API_KEY");
+  if (!apiKey) return json({ error: "Tavily is not configured. Add TAVILY_API_KEY to Supabase Edge Function secrets." }, 503);
 
-  // The Supabase gateway verifies the signed-in user's JWT before this function runs.
   const auth = request.headers.get("Authorization") || "";
   if (!auth.startsWith("Bearer ")) return json({ error: "Sign in to WEDNESDAY before searching." }, 401);
 
@@ -53,103 +45,89 @@ serve(async (request) => {
     const location = String(input.location || "").trim().slice(0, 100);
     const keywords = String(input.keywords || "").trim().slice(0, 160);
     const limit = Math.max(1, Math.min(25, Number(input.limit) || 10));
-    const sources = Array.isArray(input.sources) ? input.sources.map((v: unknown) => String(v)) : [];
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400);
 
-    const selectedSources = sources.length ? sources : ["Google Maps", "Google Search"];
-    const placeQueries = selectedSources.includes("Google Maps") ? [
-      `${businessType} in ${location}`,
-      keywords ? `${businessType} ${keywords} in ${location}` : `new ${businessType} in ${location}`,
-    ] : [];
-    const webQueries: string[] = [];
-    if (selectedSources.includes("Google Search")) {
-      webQueries.push(`newly opened ${businessType} ${location} opening 2025 2026`);
-    }
-    if (selectedSources.includes("Instagram")) {
-      webQueries.push(`site:instagram.com ${businessType} ${location}`);
-    }
-    if (selectedSources.includes("Facebook")) {
-      webQueries.push(`site:facebook.com ${businessType} ${location} business`);
-    }
-    if (selectedSources.includes("Business Websites")) {
-      webQueries.push(`${businessType} ${location} official website contact ${keywords}`);
-    }
-    if (!placeQueries.length && !webQueries.length) {
-      return json({ error: "Select at least one supported search source." }, 400);
+    const query = [
+      businessType,
+      location,
+      keywords,
+      "business contact phone address official website"
+    ].filter(Boolean).join(" ");
+
+    // One basic-search request costs one Tavily credit.
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        "Authorization": \`Bearer \${apiKey}\`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        topic: "general",
+        search_depth: "basic",
+        max_results: Math.min(20, Math.max(5, limit)),
+        include_answer: false,
+        include_raw_content: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("Tavily search error:", response.status, detail);
+      if (response.status === 401 || response.status === 403) {
+        return json({ error: "Tavily rejected the API key. Check the TAVILY_API_KEY secret." }, 502);
+      }
+      if (response.status === 429) {
+        return json({ error: "Tavily rate limit or free-credit limit reached. Try again after the limit resets." }, 429);
+      }
+      return json({ error: \`Tavily search failed (\${response.status}).\` }, 502);
     }
 
-    const [placeResponses, webResponses] = await Promise.all([
-      Promise.all(placeQueries.map(async (q) => {
-        const response = await fetch("https://google.serper.dev/places", {
-          method: "POST",
-          headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-          body: JSON.stringify({ q, gl: "in", hl: "en" }),
-        });
-        if (!response.ok) throw new Error(`Places search returned ${response.status}`);
-        return { query: q, data: await response.json() };
-      })),
-      Promise.all(webQueries.map(async (q) => {
-        const response = await fetch("https://google.serper.dev/search", {
-          method: "POST",
-          headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-          body: JSON.stringify({ q, gl: "in", hl: "en", num: 10 }),
-        });
-        if (!response.ok) throw new Error(`Web search returned ${response.status}`);
-        return { query: q, data: await response.json() };
-      })),
-    ]);
-
+    const data = await response.json();
     const seen = new Set<string>();
     const leads: Array<Record<string, unknown>> = [];
-    for (const result of placeResponses) {
-      for (const item of (result.data.places || [])) {
-        const title = String(item.title || item.name || "").trim();
-        if (!title) continue;
-        const key = title.toLowerCase().replace(/[^a-z0-9]/g, "") + "|" + String(item.address || "").toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const phone = String(item.phoneNumber || item.phone || item.internationalPhoneNumber || item.phone_number || "");
-        leads.push({
-          id: crypto.randomUUID(), name: title, company: title, phone, email: "",
-          address: String(item.address || ""), website: String(item.website || item.websiteUrl || item.link || ""),
-          source: "Google Maps / Places",
-          snippet: [item.category, item.address, item.rating ? `Rating ${item.rating}` : ""].filter(Boolean).join(" · "),
-          searchQuery: result.query, status: "Needs review", contactVerified: Boolean(phone), openingDateVerified: false,
-        });
-        if (leads.length >= limit) break;
-      }
+
+    for (const item of (data.results || [])) {
+      const title = cleanName(String(item.title || ""));
+      const url = String(item.url || "");
+      const content = String(item.content || "");
+      if (!title || !url || !/^https?:\/\//i.test(url)) continue;
+
+      const key = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+
+      const combined = \`\${title} \${content} \${url}\`;
+      const phone = extractPublicPhone(combined);
+      const email = extractPublicEmail(combined);
+      let host = "";
+      try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
+
+      leads.push({
+        id: crypto.randomUUID(),
+        name: title,
+        company: title,
+        phone,
+        email,
+        address: "",
+        website: url,
+        source: host ? \`Tavily · \${host}\` : "Tavily Web Search",
+        snippet: content.slice(0, 700),
+        searchQuery: query,
+        status: "Needs review",
+        contactVerified: Boolean(phone || email),
+        openingDateVerified: false,
+      });
       if (leads.length >= limit) break;
     }
 
-    for (const result of webResponses) {
-      for (const item of (result.data.organic || [])) {
-        const title = cleanName(String(item.title || ""));
-        const url = String(item.link || "");
-        const snippet = String(item.snippet || "");
-        if (!title || !url || !/^https?:\/\//i.test(url)) continue;
-        const key = title.toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (!key || seen.has(key)) continue;
-        seen.add(key);
-        const combined = `${title} ${snippet}`;
-        leads.push({
-          id: crypto.randomUUID(), name: title, company: title,
-          phone: extractPublicPhone(combined), email: extractPublicEmail(combined), address: "",
-          website: url, source: new URL(url).hostname.replace(/^www\./, ""), snippet,
-          searchQuery: result.query, status: "Needs review",
-          contactVerified: Boolean(extractPublicPhone(combined) || extractPublicEmail(combined)), openingDateVerified: false,
-        });
-        if (leads.length >= limit) break;
-      }
-      if (leads.length >= limit) break;
-    }
-
-    const queries = [...placeQueries, ...webQueries];
     return json({
       leads,
-      searchedQueries: queries,
+      searchedQueries: [query],
       resultCount: leads.length,
-      note: "Search results are public web listings, not proof of owner intent or opening date. Verify each business and contact before outreach.",
+      provider: "Tavily",
+      creditsNote: "One basic Tavily search request was used. Results are public web listings, not proof of owner intent, opening date, or contact ownership. Verify before outreach.",
     });
   } catch (error) {
     console.error("Lead search failed:", error);
