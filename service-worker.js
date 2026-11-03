@@ -1,4 +1,4 @@
-const CACHE = "wednesday-companions-v3";
+const CACHE = "wednesday-command-center-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,7 +9,9 @@ const ASSETS = [
   "./app.js",
   "./voice.js",
   "./config.js",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./assets/favicon.svg",
+  "./assets/shinchan.webp"
 ];
 
 self.addEventListener("install", event => {
@@ -22,23 +24,43 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))
+      Promise.all(
+        keys
+          .filter(key => key.startsWith("wednesday-") && key !== CACHE)
+          .map(key => caches.delete(key))
+      )
     )
   );
   self.clients.claim();
 });
 
+/*
+ * Network-first for this small app: users receive the latest GitHub Pages
+ * HTML, JavaScript and CSS after a deployment. Cached copies are an
+ * offline fallback, not a reason to keep running an old broken app.js.
+ */
 self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
-    caches.match(event.request).then(cached =>
-      cached || fetch(event.request).then(response => {
-        if (response.ok && new URL(event.request.url).origin === self.location.origin) {
+    fetch(request)
+      .then(response => {
+        if (response && response.ok) {
           const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(event.request, copy));
+          caches.open(CACHE).then(cache => cache.put(request, copy));
         }
         return response;
       })
-    )
+      .catch(() =>
+        caches.match(request).then(cached => {
+          if (cached) return cached;
+          if (request.mode === "navigate") return caches.match("./index.html");
+          return Response.error();
+        })
+      )
   );
 });
