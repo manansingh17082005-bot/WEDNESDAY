@@ -57,27 +57,60 @@ serve(async (request) => {
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400);
 
-    const queries = [
-      `${businessType} in ${location} phone contact website`,
+    const placeQueries = [
+      `${businessType} in ${location}`,
+      keywords ? `${businessType} ${keywords} in ${location}` : `new ${businessType} in ${location}`,
+    ];
+    const webQueries = [
       `newly opened ${businessType} ${location} opening 2025 2026`,
-      `site:instagram.com ${businessType} ${location} cafe`,
-      `site:facebook.com ${businessType} ${location} business page`,
-      keywords ? `${businessType} ${location} ${keywords} contact` : `${businessType} ${location} official website contact`,
-    ].slice(0, Math.min(5, Math.max(2, sources.length || 3)));
+      `site:instagram.com ${businessType} ${location}`,
+      `site:facebook.com ${businessType} ${location} business`,
+    ];
 
-    const responses = await Promise.all(queries.map(async (q) => {
-      const response = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, gl: "in", hl: "en", num: 10 }),
-      });
-      if (!response.ok) throw new Error(`Search provider returned ${response.status}`);
-      return { query: q, data: await response.json() };
-    }));
+    const [placeResponses, webResponses] = await Promise.all([
+      Promise.all(placeQueries.map(async (q) => {
+        const response = await fetch("https://google.serper.dev/places", {
+          method: "POST",
+          headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ q, gl: "in", hl: "en" }),
+        });
+        if (!response.ok) throw new Error(`Places search returned ${response.status}`);
+        return { query: q, data: await response.json() };
+      })),
+      Promise.all(webQueries.map(async (q) => {
+        const response = await fetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ q, gl: "in", hl: "en", num: 10 }),
+        });
+        if (!response.ok) throw new Error(`Web search returned ${response.status}`);
+        return { query: q, data: await response.json() };
+      })),
+    ]);
 
     const seen = new Set<string>();
     const leads: Array<Record<string, unknown>> = [];
-    for (const result of responses) {
+    for (const result of placeResponses) {
+      for (const item of (result.data.places || [])) {
+        const title = String(item.title || item.name || "").trim();
+        if (!title) continue;
+        const key = title.toLowerCase().replace(/[^a-z0-9]/g, "") + "|" + String(item.address || "").toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const phone = String(item.phoneNumber || item.phone || item.internationalPhoneNumber || item.phone_number || "");
+        leads.push({
+          id: crypto.randomUUID(), name: title, company: title, phone, email: "",
+          address: String(item.address || ""), website: String(item.website || item.websiteUrl || item.link || ""),
+          source: "Google Maps / Places",
+          snippet: [item.category, item.address, item.rating ? `Rating ${item.rating}` : ""].filter(Boolean).join(" · "),
+          searchQuery: result.query, status: "Needs review", contactVerified: Boolean(phone), openingDateVerified: false,
+        });
+        if (leads.length >= limit) break;
+      }
+      if (leads.length >= limit) break;
+    }
+
+    for (const result of webResponses) {
       for (const item of (result.data.organic || [])) {
         const title = cleanName(String(item.title || ""));
         const url = String(item.link || "");
@@ -88,24 +121,18 @@ serve(async (request) => {
         seen.add(key);
         const combined = `${title} ${snippet}`;
         leads.push({
-          id: crypto.randomUUID(),
-          name: title,
-          company: title,
-          phone: extractPublicPhone(combined),
-          email: extractPublicEmail(combined),
-          website: url,
-          source: new URL(url).hostname.replace(/^www\./, ""),
-          snippet,
-          searchQuery: result.query,
-          status: "Needs review",
-          contactVerified: Boolean(extractPublicPhone(combined) || extractPublicEmail(combined)),
-          openingDateVerified: false,
+          id: crypto.randomUUID(), name: title, company: title,
+          phone: extractPublicPhone(combined), email: extractPublicEmail(combined), address: "",
+          website: url, source: new URL(url).hostname.replace(/^www\./, ""), snippet,
+          searchQuery: result.query, status: "Needs review",
+          contactVerified: Boolean(extractPublicPhone(combined) || extractPublicEmail(combined)), openingDateVerified: false,
         });
         if (leads.length >= limit) break;
       }
       if (leads.length >= limit) break;
     }
 
+    const queries = [...placeQueries, ...webQueries];
     return json({
       leads,
       searchedQueries: queries,
