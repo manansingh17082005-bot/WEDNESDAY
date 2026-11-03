@@ -92,3 +92,11 @@
 @keyframes buddy-speaking-pose{from{translate:0 0;scale:1}to{translate:0 -4px;scale:1.035}}
 @keyframes buddy-listen-pose{0%,100%{rotate:0deg}50%{rotate:3deg}}
 @media(prefers-reduced-motion:reduce){.buddy-action-bubble,.buddy-action-controls button{transition:none}.buddy-scene[data-action] .shinchan-art,.buddy-scene[data-action] .himawari-art{animation:none!important}}
+
+
+/* Blend the white matte on the current Shinchan image into the warm scene.
+   This keeps the existing character art while removing the obvious white card look. */
+.shinchan-art .classic-character-image,
+.shinchan-avatar img{
+  mix-blend-mode:multiply;
+}
