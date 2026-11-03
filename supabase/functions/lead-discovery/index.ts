@@ -18,7 +18,7 @@ const json = (body: unknown, status = 200) =>
 
 function extractPublicPhone(text: string): string {
   const match = text.match(/(?:\+?91[\s-]?)?([6-9]\d{9})/);
-  return match ? \`+91 \${match[1]}\` : "";
+  return match ? `+91 ${match[1]}` : "";
 }
 
 function extractPublicEmail(text: string): string {
@@ -59,7 +59,7 @@ serve(async (request) => {
     const response = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: {
-        "Authorization": \`Bearer \${apiKey}\`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -81,7 +81,7 @@ serve(async (request) => {
       if (response.status === 429) {
         return json({ error: "Tavily rate limit or free-credit limit reached. Try again after the limit resets." }, 429);
       }
-      return json({ error: \`Tavily search failed (\${response.status}).\` }, 502);
+      return json({ error: `Tavily search failed (${response.status}).` }, 502);
     }
 
     const data = await response.json();
@@ -98,7 +98,7 @@ serve(async (request) => {
       if (!key || seen.has(key)) continue;
       seen.add(key);
 
-      const combined = \`\${title} \${content} \${url}\`;
+      const combined = `${title} ${content} ${url}`;
       const phone = extractPublicPhone(combined);
       const email = extractPublicEmail(combined);
       let host = "";
@@ -112,7 +112,7 @@ serve(async (request) => {
         email,
         address: "",
         website: url,
-        source: host ? \`Tavily · \${host}\` : "Tavily Web Search",
+        source: host ? `Tavily · ${host}` : "Tavily Web Search",
         snippet: content.slice(0, 700),
         searchQuery: query,
         status: "Needs review",
