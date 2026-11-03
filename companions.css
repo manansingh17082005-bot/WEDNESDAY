@@ -1,22 +1,50 @@
-/* WEDNESDAY companion selector */
-.companion-picker{width:100%;padding:18px;background:#fffdf8;border:2px solid #f0d9bd;border-radius:22px;box-shadow:0 5px 0 #f1dfca}
+/* Warm 2D cartoon companion room */
+.companion-picker{width:100%;padding:18px;background:linear-gradient(160deg,#fffaf0,#fff0df);border:2px solid #f0d9bd;border-radius:22px;box-shadow:0 5px 0 #f1dfca;overflow:hidden}
 .companion-picker-heading h3{margin:7px 0 5px;color:#49363a;font:800 18px Manrope,sans-serif}
-.companion-picker-heading p{margin:0 0 16px;color:#8e7778;font-size:11px;line-height:1.5}
-.companion-options{display:grid;gap:10px}
-.companion-option{width:100%;display:flex;align-items:center;gap:11px;padding:12px;text-align:left;border:2px solid #f0d9c4;border-radius:16px;background:#fffaf2;color:#49363a;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.companion-picker-heading p{margin:0 0 12px;color:#8e7778;font-size:11px;line-height:1.5}
+.buddy-stage{position:relative;height:210px;margin:0 0 13px;border-radius:18px;background:radial-gradient(ellipse at 50% 100%,#f5d9b9 0 15%,transparent 16%),linear-gradient(#dff2f5,#fff4df);overflow:hidden;display:grid;place-items:end center}
+.buddy-scene{position:relative;width:100%;height:100%;display:flex;align-items:end;justify-content:center;gap:8px;--look-x:0px;--look-y:0px}
+.buddy-art{position:relative;width:31%;height:176px;display:none;animation:buddy-bob 3s ease-in-out infinite;transform-origin:bottom center}
+#wednesday-stage[data-companion="shinchan"] .shinchan-art,#wednesday-stage[data-companion="himawari"] .himawari-art,#wednesday-stage[data-companion="shiro"] .shiro-art{display:block}
+.buddy-face{position:absolute;z-index:2;width:83px;height:91px;left:50%;top:42px;transform:translateX(-50%);border:3px solid #49352e;border-radius:43% 43% 46% 46%;background:#ffd5a9;box-shadow:inset -5px -3px #eebc91}
+.buddy-hair{position:absolute;z-index:3;width:90px;height:43px;left:50%;top:30px;transform:translateX(-50%);background:#292321;border:3px solid #292321;border-radius:48% 48% 22% 22%;clip-path:polygon(0 0,100% 0,94% 80%,80% 64%,69% 100%,53% 69%,39% 100%,25% 68%,8% 88%)}
+.eye{position:absolute;top:34px;width:12px;height:16px;border:2px solid #28201d;background:white;border-radius:50%;overflow:hidden}
+.eye:after{content:"";position:absolute;width:7px;height:10px;left:2px;top:2px;border-radius:50%;background:#292321;transform:translate(var(--look-x),var(--look-y))}
+.eye-left{left:18px}.eye-right{right:18px}
+.brow{position:absolute;top:25px;width:17px;height:4px;background:#292321;border-radius:50%}
+.brow-left{left:14px;transform:rotate(8deg)}.brow-right{right:14px;transform:rotate(-8deg)}
+.buddy-nose{position:absolute;left:50%;top:51px;width:8px;height:7px;background:#e99b78;border-radius:50%;transform:translateX(-50%)}
+.buddy-mouth{position:absolute;left:50%;top:65px;width:20px;height:9px;border-bottom:3px solid #713d37;border-radius:0 0 50% 50%;transform:translateX(-50%)}
+.cheek{position:absolute;top:58px;width:13px;height:7px;background:#f39b91aa;border-radius:50%}.cheek-left{left:5px}.cheek-right{right:5px}
+.buddy-body{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:91px;height:78px;border:3px solid #49352e;border-radius:35px 35px 8px 8px;background:#e64c42}
+.himawari-art .buddy-hair{height:55px;background:#f2c64c;border-color:#49352e;border-radius:50% 50% 22% 22%;clip-path:polygon(0 20%,18% 0,35% 18%,50% 0,67% 17%,86% 0,100% 24%,88% 100%,12% 100%)}
+.himawari-art .buddy-face{background:#ffdbb6}
+.himawari-art .buddy-body{background:#f3b84e}
+.shiro-art{width:40%;height:145px}
+.shiro-art .buddy-face{top:46px;width:103px;height:76px;background:#fff;border-radius:46% 46% 42% 42%}
+.shiro-art .buddy-body{width:100px;height:65px;background:#fff;border-radius:50% 50% 12px 12px}
+.dog-ear{position:absolute;z-index:1;top:45px;width:32px;height:55px;background:#fff;border:3px solid #49352e;border-radius:50%;transform:rotate(25deg)}
+.ear-left{left:calc(50% - 50px)}.ear-right{right:calc(50% - 50px);transform:rotate(-25deg)}
+.shiro-art .eye{top:28px;width:9px;height:12px}.shiro-art .eye-left{left:23px}.shiro-art .eye-right{right:23px}
+.dog-nose{position:absolute;top:44px;left:50%;width:14px;height:9px;transform:translateX(-50%);background:#242126;border-radius:50%}
+.dog-mouth{position:absolute;top:54px;left:50%;width:19px;height:10px;transform:translateX(-50%);border-bottom:2px solid #333;border-radius:50%}
+.buddy-shadow{position:absolute;bottom:5px;width:180px;height:13px;background:#9e806044;border-radius:50%}
+@keyframes buddy-bob{0%,100%{translate:0 0}50%{translate:0 -5px}}
+#wednesday-stage[data-state="listening"] .buddy-face{filter:brightness(1.06)}
+#wednesday-stage[data-state="speaking"] .buddy-mouth{height:14px;background:#873e48;border:2px solid #713d37;animation:buddy-talk .22s infinite alternate}
+@keyframes buddy-talk{to{transform:translateX(-50%) scaleY(.5)}}
+#wednesday-stage[data-state="thinking"] .buddy-art{animation:buddy-think 1s ease-in-out infinite alternate}
+@keyframes buddy-think{to{transform:rotate(3deg) translateY(-3px)}}
+.companion-options{display:grid;gap:9px}
+.companion-option{width:100%;display:flex;align-items:center;gap:11px;padding:10px;text-align:left;border:2px solid #f0d9c4;border-radius:15px;background:#fffaf2;color:#49363a;cursor:pointer;transition:transform .18s,border-color .18s}
 .companion-option:hover{transform:translateY(-2px);border-color:#eda18b}
 .companion-option.is-selected{border-color:#ed8068;background:#fff0e6;box-shadow:0 3px 0 #f0d2bd}
-.companion-avatar{width:49px;height:49px;flex:0 0 49px;display:grid;place-items:center;border-radius:15px;font-size:28px}
+.companion-avatar{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:13px;font-size:25px}
 .shinchan-avatar{background:#ffe0c9}.himawari-avatar{background:#fff0b9}.shiro-avatar{background:#e6f3ff}
-.companion-option-copy{min-width:0;display:grid;gap:4px}
-.companion-option-copy strong{font:800 13px Manrope,sans-serif}
-.companion-option-copy small{font-size:10px;color:#8e7778}
-.companion-check{margin-left:auto;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#e8f4e8;color:#53835d;font-size:12px;opacity:0}
-.companion-option.is-selected .companion-check{opacity:1}
-.companion-detail{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;padding:11px 12px;border-radius:12px;background:#fff2e4;color:#5b4142}
-.companion-detail strong{font-size:11px}.companion-detail span{font-size:10px;color:#8b7070;text-align:right}
-.companion-art-note{margin:12px 0 0;color:#9b8580;font-size:9px;line-height:1.5}
-#active-companion-avatar{background:#ffe2c9;color:#67443f;font-size:23px}
-.chat-header>div:nth-child(2){min-width:0}
-@media(max-width:1050px){.companion-picker{max-width:100%}.companion-options{grid-template-columns:repeat(3,minmax(0,1fr))}.companion-option{flex-direction:column;text-align:center;align-items:center}.companion-check{margin:0}.companion-option-copy small{min-height:25px}}
-@media(max-width:650px){.companion-options{grid-template-columns:1fr}.companion-option{flex-direction:row;text-align:left;align-items:center}.companion-check{margin-left:auto}.companion-option-copy small{min-height:0}}
+.companion-option-copy{display:grid;gap:4px}.companion-option-copy strong{font:800 13px Manrope}.companion-option-copy small{font-size:10px;color:#8e7778}
+.companion-check{margin-left:auto;opacity:0}.companion-option.is-selected .companion-check{opacity:1}
+.companion-detail{display:flex;justify-content:space-between;gap:8px;margin-top:12px;padding:10px;border-radius:12px;background:#fff2e4;color:#5b4142;font-size:11px}
+.companion-art-note{margin:10px 0 0;color:#8e7778;font-size:10px;line-height:1.5}
+.handsfree-button.voice-active{background:#285343;border-color:#4caa82;color:#d6ffec}
+.voice-status{display:block;padding:7px 4px;color:var(--muted,#8b91a5);font-size:11px}
+@media(max-width:1050px){.companion-picker{max-width:100%}}
