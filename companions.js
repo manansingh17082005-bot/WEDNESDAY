@@ -36,6 +36,7 @@
             <div class="buddy-art shiro-art"><div class="dog-ear ear-left"></div><div class="dog-ear ear-right"></div><div class="buddy-face"><i class="eye eye-left"></i><i class="eye eye-right"></i><i class="dog-nose"></i><i class="dog-mouth"></i></div><div class="buddy-body"></div></div>
           </div>
           <div class="buddy-shadow"></div>
+          <div class="buddy-action-bubble" id="buddy-action-bubble" aria-live="polite">Hi! I’m ready!</div>
         </div>
         <div class="companion-options" role="group" aria-label="Choose a companion">
           <button type="button" class="companion-option" data-character="shinchan" aria-pressed="false"><span class="companion-avatar shinchan-avatar"><img src="./assets/shinchan.webp" alt="" onerror="this.replaceWith(document.createTextNode('🧒'))"></span><span class="companion-option-copy"><strong>Shinchan</strong><small>Everyday AI & coding</small></span><span class="companion-check">✓</span></button>
@@ -43,12 +44,39 @@
           <button type="button" class="companion-option" data-character="shiro" aria-pressed="false"><span class="companion-avatar shiro-avatar">🐶</span><span class="companion-option-copy"><strong>Shiro</strong><small>Tasks & productivity</small></span><span class="companion-check">✓</span></button>
         </div>
         <div class="companion-detail" id="companion-detail" aria-live="polite"></div>
+        <div class="buddy-action-controls" aria-label="Character actions"><button type="button" data-buddy-action="wave">👋 Wave</button><button type="button" data-buddy-action="dance">💃 Dance</button><button type="button" data-buddy-action="jump">⭐ Jump</button><button type="button" data-buddy-action="think">💭 Think</button></div>
         <p class="companion-art-note" id="companion-greeting">Your friends are waiting!</p>
       </div>`;
     aside.querySelectorAll("[data-character]").forEach(b=>b.addEventListener("click",()=>setActiveCharacter(b.dataset.character)));
     setActiveCharacter(activeId);
     const scene=document.getElementById("buddy-scene");
     activateMovement(scene);
+
+    const actionBubble=document.getElementById("buddy-action-bubble");
+    const stage=document.getElementById("wednesday-stage");
+    let actionTimer=null;
+    function showAction(action,duration=1800){
+      if(!scene)return;
+      clearTimeout(actionTimer);
+      scene.dataset.action=action;
+      if(actionBubble){
+        const labels={wave:"Hello! 👋",dance:"Dance time! 🎵",jump:"Wheee! ⭐",think:"Hmm… let me think 💭",speaking:"I'm talking to you! 💬",listening:"I'm listening… 👂",happy:"Yay! 😄",idle:"I'm right here!"};
+        actionBubble.textContent=labels[action]||"Let's go!";
+        actionBubble.classList.add("is-visible");
+      }
+      if(duration)actionTimer=setTimeout(()=>{scene.dataset.action="idle";if(actionBubble)actionBubble.classList.remove("is-visible");},duration);
+    }
+    document.querySelectorAll("[data-buddy-action]").forEach(button=>button.addEventListener("click",()=>showAction(button.dataset.buddyAction)));
+    if(stage){
+      const syncState=()=>{
+        const state=stage.dataset.state||"idle";
+        if(["speaking","thinking","listening","happy"].includes(state))showAction(state,0);
+        else if(!scene.dataset.action||["speaking","thinking","listening","happy"].includes(scene.dataset.action))showAction("idle",0);
+      };
+      new MutationObserver(syncState).observe(stage,{attributes:true,attributeFilter:["data-state"]});
+      syncState();
+    }
+
     document.addEventListener("mousemove",e=>{
       if(!scene)return;
       const r=scene.getBoundingClientRect(),x=(e.clientX-(r.left+r.width/2))/(r.width/2),y=(e.clientY-(r.top+r.height/2))/(r.height/2);
