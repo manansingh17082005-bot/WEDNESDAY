@@ -32,14 +32,14 @@
         <div class="buddy-stage" id="buddy-stage" aria-label="Animated 2D companion">
           <div class="buddy-scene" id="buddy-scene">
             <div class="buddy-art shinchan-art"><img class="classic-character-image" src="./assets/shinchan.webp" alt="Classic Shinchan Nohara" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="character-image-placeholder" hidden>Add Shinchan artwork at assets/shinchan.png</span></div>
-            <div class="buddy-art himawari-art"><img class="classic-character-image" src="./assets/himawari.png" alt="Classic Himawari Nohara" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="character-image-placeholder" hidden>Add Himawari artwork at assets/himawari.png</span></div>
+            <div class="buddy-art himawari-art"><img class="classic-character-image" src="https://img-13.stickers.cloud/packs/cac801b5-19b1-4f8f-aab7-20d3cb27263f/webp/c48cf2e8-07a1-4309-af4f-ee72641301b8.webp" alt="Classic Himawari Nohara" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="character-image-placeholder" hidden>Himawari artwork could not load — check your connection</span></div>
             <div class="buddy-art shiro-art"><div class="dog-ear ear-left"></div><div class="dog-ear ear-right"></div><div class="buddy-face"><i class="eye eye-left"></i><i class="eye eye-right"></i><i class="dog-nose"></i><i class="dog-mouth"></i></div><div class="buddy-body"></div></div>
           </div>
           <div class="buddy-shadow"></div>
         </div>
         <div class="companion-options" role="group" aria-label="Choose a companion">
           <button type="button" class="companion-option" data-character="shinchan" aria-pressed="false"><span class="companion-avatar shinchan-avatar"><img src="./assets/shinchan.webp" alt="" onerror="this.replaceWith(document.createTextNode('🧒'))"></span><span class="companion-option-copy"><strong>Shinchan</strong><small>Everyday AI & coding</small></span><span class="companion-check">✓</span></button>
-          <button type="button" class="companion-option" data-character="himawari" aria-pressed="false"><span class="companion-avatar himawari-avatar"><img src="./assets/himawari.png" alt="" onerror="this.replaceWith(document.createTextNode('👧'))"></span><span class="companion-option-copy"><strong>Himawari</strong><small>Excel & data reports</small></span><span class="companion-check">✓</span></button>
+          <button type="button" class="companion-option" data-character="himawari" aria-pressed="false"><span class="companion-avatar himawari-avatar"><img src="https://img-13.stickers.cloud/packs/cac801b5-19b1-4f8f-aab7-20d3cb27263f/webp/c48cf2e8-07a1-4309-af4f-ee72641301b8.webp" alt="" onerror="this.replaceWith(document.createTextNode('👧'))"></span><span class="companion-option-copy"><strong>Himawari</strong><small>Excel & data reports</small></span><span class="companion-check">✓</span></button>
           <button type="button" class="companion-option" data-character="shiro" aria-pressed="false"><span class="companion-avatar shiro-avatar">🐶</span><span class="companion-option-copy"><strong>Shiro</strong><small>Tasks & productivity</small></span><span class="companion-check">✓</span></button>
         </div>
         <div class="companion-detail" id="companion-detail" aria-live="polite"></div>
