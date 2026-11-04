@@ -9,6 +9,7 @@
   <title>WEDNESDAY | Command Center</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./dashboard-studio.css">
   <link rel="stylesheet" href="./wednesday-cartoon-theme.css">
 </head>
 <body>
@@ -54,6 +55,7 @@
 
       <nav id="nav">
         <button class="nav-item active" data-page="overview"><span>◫</span> Overview</button>
+        <button class="nav-item" data-page="dashboard-builder"><span>▥</span> Dashboard Studio</button>
         <button class="nav-item" data-page="assistant"><span>✧</span> AI Assistant</button>
         <button class="nav-item" data-page="lead-generation"><span>⌕</span> Lead Generation</button>
         <button class="nav-item" data-page="clients"><span>♙</span> Client CRM</button>
@@ -159,6 +161,41 @@
         </div>
       </section>
 
+      <!-- DASHBOARD STUDIO -->
+      <section class="page" id="page-dashboard-builder">
+        <div class="section-heading">
+          <div><span class="eyebrow">DATA → DECISIONS</span><h2>Dashboard Studio</h2><p class="muted">Import an Excel or CSV file and build a visual dashboard with KPIs, charts, filters and a data table. Files are processed in this browser.</p></div>
+        </div>
+        <div class="dashboard-builder-grid">
+          <section class="panel dashboard-controls">
+            <div><span class="eyebrow">STEP 01</span><h3>Start with your data</h3></div>
+            <label>Dashboard name<input id="dash-name" type="text" value="My Business Dashboard" maxlength="70"></label>
+            <label>Upload Excel / CSV file<input id="dash-file" type="file" accept=".xlsx,.xls,.csv"></label>
+            <p class="note">The first worksheet is imported. Up to 10,000 rows are processed. Your file is not uploaded to a server.</p>
+            <div><span class="eyebrow">STEP 02</span><h3>Configure your view</h3></div>
+            <label>Numeric metric<select id="dash-metric" disabled><option>Import data first</option></select></label>
+            <label>Group by category<select id="dash-category" disabled><option>Import data first</option></select></label>
+            <label>KPI field<select id="dash-kpi" disabled><option>Import data first</option></select></label>
+            <label>Chart type<select id="dash-chart-type"><option value="bar">Bar chart</option><option value="line">Line chart</option><option value="doughnut">Doughnut chart</option></select></label>
+            <label>Filter<select id="dash-filter"><option value="">All records</option></select></label>
+            <div class="button-row"><button class="primary-btn" type="button" id="dash-build-btn" disabled>Build dashboard</button><button class="secondary-btn" type="button" id="dash-save-btn">Save</button></div>
+            <button class="secondary-btn" type="button" id="dash-export-btn">Export dashboard data (.xlsx)</button>
+            <p id="dash-status" class="muted" role="status" aria-live="polite">Upload a spreadsheet to begin.</p>
+            <div><span class="eyebrow">SAVED IN THIS BROWSER</span><div id="dash-saved-list" class="dashboard-saved"><p class="muted">Your saved dashboards will appear here.</p></div></div>
+          </section>
+          <section class="dashboard-preview">
+            <div id="dash-kpis" class="dashboard-kpis">
+              <article class="stat-card"><span>RECORDS</span><strong>—</strong><small>Waiting for data</small></article>
+              <article class="stat-card"><span>TOTAL</span><strong>—</strong><small>Waiting for data</small></article>
+              <article class="stat-card"><span>AVERAGE</span><strong>—</strong><small>Waiting for data</small></article>
+              <article class="stat-card"><span>FIELDS</span><strong>—</strong><small>Waiting for data</small></article>
+            </div>
+            <div class="panel dashboard-chart-panel"><div class="panel-head"><div><span class="eyebrow">VISUAL ANALYTICS</span><h3>Performance overview</h3></div></div><div class="dashboard-chart-wrap"><canvas id="dash-chart" aria-label="Dashboard chart"></canvas></div></div>
+            <div class="panel"><div class="panel-head"><div><span class="eyebrow">SOURCE DATA</span><h3>Data preview</h3></div><span class="muted">First 100 matching rows</span></div><div class="table-wrap dashboard-table"><table><thead id="dash-table-head"><tr><th>Upload a file to preview columns</th></tr></thead><tbody id="dash-table-body"><tr><td>Your imported records will appear here.</td></tr></tbody></table></div></div>
+          </section>
+        </div>
+      </section>
+
       <!-- AI ASSISTANT -->
       <section class="page" id="page-assistant">
         <div class="section-heading">
@@ -173,7 +210,7 @@
           <aside class="character-companions" aria-label="WEDNESDAY companions">
             <div class="character-card">
               <div class="character-image">
-                <img src="./assets/companions.png" alt="WEDNESDAY's cartoon companions" id="companions-character">
+                <img src="./assets/shinchan.webp" alt="WEDNESDAY's cartoon companions" id="companions-character">
               </div>
               <div class="character-caption">
                 <b>WEDNESDAY companions</b>
@@ -536,9 +573,11 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./app.js"></script>
+  <script src="./dashboard-studio.js"></script>
   <script src="./voice.js"></script>
 </body>
 </html>
