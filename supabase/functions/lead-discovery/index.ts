@@ -50,6 +50,33 @@ function extractPublicWhatsApp(text: string): string {
   return "";
 }
 
+
+function scoreProspect(text: string, services: string[], phone: string, email: string, whatsapp: string, url: string) {
+  const lower = text.toLowerCase();
+  let score = 20;
+  const reasons: string[] = [];
+  const hiringSignals = ["hiring freelancer", "looking for freelancer", "freelancer required", "need a freelancer", "looking for a developer", "website developer required", "excel expert required", "data analyst required", "need a website", "need website", "request a quote", "get a quote", "contact for project", "project requirement", "job opening for"];
+  const hiringHits = hiringSignals.filter(term => lower.includes(term));
+  if (hiringHits.length) { score += Math.min(35, hiringHits.length * 18); reasons.push("Possible active hiring or project request"); }
+  const serviceSignals: Record<string, string[]> = {
+    "Excel / Data Entry": ["excel report", "spreadsheet", "data entry", "manual reporting", "sales report", "inventory report", "excel dashboard", "data cleaning", "microsoft excel"],
+    "Excel Reporting & Dashboards": ["excel report", "spreadsheet", "manual reporting", "sales report", "inventory report", "excel dashboard", "data cleaning", "microsoft excel"],
+    "Google Sheets Automation": ["google sheets", "google spreadsheet", "sheets automation", "automate spreadsheet", "shared spreadsheet", "google workspace"],
+    "Data Analysis": ["business intelligence", "data analysis", "analytics", "monthly report", "performance report", "dashboard", "reporting"],
+    "Website Development": ["website development", "web developer", "website redesign", "website design", "web development", "online booking", "ecommerce website", "website under construction", "launching soon", "no website"],
+  };
+  const matchedServices = services.filter(service => (serviceSignals[service] || []).some(term => lower.includes(term)));
+  if (matchedServices.length) { score += Math.min(25, matchedServices.length * 12); reasons.push("Public text matches the service offered"); }
+  const needSignals = ["outdated website", "website not working", "under construction", "coming soon", "manual process", "manual entry", "spreadsheet", "reporting", "inventory", "booking", "online orders", "multiple locations", "growing business"];
+  const needHits = needSignals.filter(term => lower.includes(term));
+  if (needHits.length) { score += Math.min(15, needHits.length * 3); reasons.push("Potential workflow or website improvement signal"); }
+  if (phone || email || whatsapp) { score += 10; reasons.push("Public business contact detail found"); }
+  if (url && !/instagram\\.com|facebook\\.com|linkedin\\.com|justdial\\.com/i.test(url)) { score += 5; reasons.push("Business website or direct source available"); }
+  const scoreValue = Math.max(0, Math.min(100, score));
+  const tier = scoreValue >= 75 ? "High research priority" : scoreValue >= 50 ? "Medium research priority" : "Low research priority";
+  return { score: scoreValue, tier, reasons: reasons.length ? reasons : ["No strong buying-intent signal found; verify manually"], matchedServices };
+}
+
 function cleanName(title: string): string {
   return title.replace(/\s*[-|•].*$/, "").replace(/\s*\(.*\)$/, "").trim().slice(0, 120);
 }
@@ -101,6 +128,10 @@ serve(async (request) => {
       location,
       keywords,
       services.join(" "),
+      services.includes("Excel Reporting & Dashboards") ? "businesses with spreadsheet reporting inventory sales tracking manual excel reporting needs" : "",
+      services.includes("Google Sheets Automation") ? "businesses using Google Sheets shared trackers workflow automation repetitive reporting" : "",
+      services.includes("Website Development") ? "small businesses with outdated website missing website website redesign online booking ecommerce web development" : "",
+      "businesses asking for quotes project requirements hiring freelance spreadsheet developer web developer",
       sources.length ? `public pages and listings from ${sources.join(" ")}` : "",
       market === "international" ? "international business" : market === "india" ? "India-based business" : "",
       businessModel === "agency" ? "business needing creative agency marketing services" : businessModel === "freelance" ? "business needing freelance professional services" : "",
@@ -157,6 +188,7 @@ serve(async (request) => {
       const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
       const whatsappNumber = extractPublicWhatsApp(combined);
+      const qualification = scoreProspect(combined, services, phone, email, whatsappNumber, url);
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
@@ -185,7 +217,7 @@ serve(async (request) => {
       searchedQueries: [query],
       resultCount: leads.length,
       provider: "Tavily",
-      creditsNote: "One basic Tavily search request was used. Results are public web listings, not proof of owner intent, opening date, or contact ownership. Verify before outreach.",
+      creditsNote: "One basic Tavily search request was used. Priority scores are heuristic research signals, not hiring probabilities. Public listings do not prove owner intent, budget, opening date, or contact ownership. Verify before outreach.",
     }, 200, origin);
   } catch (error) {
     console.error("Lead search failed:", error);
