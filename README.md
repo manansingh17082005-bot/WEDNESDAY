@@ -13,7 +13,7 @@ WEDNESDAY is a local-first business operating workspace for freelance services a
 
 ## Important storage limitation
 
-The new Business Hub currently stores opportunities, transactions, preferences and approval-queue records in this browser's local storage. The existing CRM and tasks also remain local-first. This means records do not automatically sync to another device or browser. Use **Export backup** regularly and keep backups private. The SQL migration below prepares owner-scoped cloud tables, but the current frontend does not yet sync these tables.
+The Business Hub and CRM now support Supabase cloud sync for opportunities, transactions, outreach approvals and client records after sign-in and migration setup. Browser local storage remains the offline-first fallback. The Business Hub preference selectors and existing tasks remain browser-local. Cloud sync merges local and cloud records by ID and propagates deletions after a successful sync. Use **Export backup** regularly and keep backups private.
 
 Dashboard Studio processes spreadsheet data in the browser. Avoid importing sensitive client or financial information on a shared computer.
 
@@ -44,7 +44,7 @@ Tavily searches public web pages. It does not grant access to private or logged-
 
 ## Business Hub database migration (optional preparation)
 
-The new `supabase-business-hub-schema.sql` file creates owner-scoped opportunities, transactions and outreach-approval tables with row-level security. Run it in Supabase SQL Editor only after the base `supabase-schema.sql`. This is preparation for a future cloud-sync upgrade; current Business Hub records are still browser-local.
+The `supabase-business-hub-schema.sql` migration extends the existing CRM table with company, phone and email fields and creates owner-scoped opportunities, transactions and outreach-approval tables with row-level security. Run it in Supabase SQL Editor only after the base `supabase-schema.sql`. The frontend `business-cloud-sync.js` uses the signed-in Supabase session and the public browser key; no service-role key is needed or permitted in the browser.
 
 ## AI and hosting limitations
 
@@ -72,4 +72,4 @@ Open `http://localhost:8000`.
 
 ## Deployment
 
-The frontend is published through GitHub Pages. Supabase provides authentication and the server-side lead-search function. Business Hub and the current CRM remain local-first until cloud sync is implemented.
+The frontend is published through GitHub Pages. Supabase provides authentication and the server-side lead-search function. Business Hub and CRM sync to Supabase when the migration has been run and the owner is signed in; local storage remains the offline fallback. Tasks and business preference settings remain local-only.
