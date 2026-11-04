@@ -824,6 +824,8 @@ function initializeLeadGeneration() {
       const businessType = $("lead-business-type")?.value.trim();
       const location = $("lead-location")?.value.trim();
       const keywords = $("lead-keywords")?.value.trim();
+      const market = $("lead-market")?.value || "both";
+      const businessModel = $("lead-business-model")?.value || "both";
       const limit = Number($("lead-limit")?.value || 25);
 
       if (!services.length || !businessType || !location) {
@@ -844,7 +846,7 @@ function initializeLeadGeneration() {
         if (!sessionData?.session) throw new Error("Please sign in to WEDNESDAY before searching.");
 
         const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
-          body: { businessType, location, keywords, limit, sources, services }
+          body: { businessType, location, keywords, limit, sources, services, market, businessModel }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
