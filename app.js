@@ -904,7 +904,28 @@ function initializeLeadGeneration() {
         const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
           body: { businessType, location, keywords, limit, sources, services, market, businessModel, filters: { noWebsite: Boolean($("lead-filter-website")?.checked), weakSocial: Boolean($("lead-filter-social")?.checked), publicContact: Boolean($("lead-filter-contact")?.checked) } }
         });
-        if (error) throw error;
+        if (error) {
+          // Supabase wraps non-2xx Edge Function responses in FunctionsHttpError.
+          // Read the function's JSON body so setup/auth/provider errors are visible in the UI.
+          let functionMessage = "";
+          const responseContext = error.context;
+          if (responseContext && typeof responseContext.clone === "function") {
+            try {
+              const errorBody = await responseContext.clone().json();
+              functionMessage = errorBody?.error || errorBody?.message || "";
+            } catch (_) {
+              // The response may not contain JSON; fall back to status and SDK message.
+            }
+          }
+          const statusCode = responseContext?.status;
+          if (functionMessage) {
+            throw new Error(functionMessage);
+          }
+          if (statusCode) {
+            throw new Error(`Lead search function returned HTTP ${statusCode}. ${error.message || "Check Supabase Edge Function logs and configuration."}`);
+          }
+          throw new Error(error.message || "Lead search function failed. Check Supabase Edge Function logs.");
+        }
         if (data?.error) throw new Error(data.error);
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
