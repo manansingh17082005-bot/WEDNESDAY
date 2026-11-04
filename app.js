@@ -708,7 +708,7 @@ function downloadLeadExcel() {
     { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 27 }, { wch: 20 },
     { wch: 30 }, { wch: 38 }, { wch: 18 }, { wch: 42 }, { wch: 18 }, { wch: 24 }, { wch: 70 }
   ];
-  leadsSheet["!autofilter"] = { ref: leadsSheet["!ref"] || "A1:I1" };
+  leadsSheet["!autofilter"] = { ref: leadsSheet["!ref"] || "A1:L1" };
   leadsSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
   XLSX.utils.book_append_sheet(workbook, leadsSheet, "Lead List");
 
