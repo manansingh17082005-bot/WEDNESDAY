@@ -212,6 +212,8 @@ serve(async (request) => {
       if (leads.length >= limit) break;
     }
 
+    leads.sort((a, b) => Number((b as Record<string, unknown>).priorityScore || 0) - Number((a as Record<string, unknown>).priorityScore || 0));
+
     return json({
       leads,
       searchedQueries: [query],
