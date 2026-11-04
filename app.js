@@ -297,6 +297,7 @@ const pageTitles = {
   "lead-generation": "Lead Generation",
   clients: "Client Management",
   outreach: "Outreach Studio",
+  "business-hub": "Business Hub",
   messages: "Messages",
   personal: "Personal Space",
   coach: "AI Coach",
