@@ -57,6 +57,7 @@ let discoveredLeads = [];
 
 let supabaseClient = null;
 let supabaseAuthReady = false;
+window.WEDNESDAY_SUPABASE_CLIENT = null;
 
 window.WEDNESDAY_LOCAL_MODE = true;
 window.WEDNESDAY_PAUSED = false;
@@ -1290,6 +1291,7 @@ function initializeSupabase() {
     !window.supabase?.createClient
   ) {
     supabaseClient = null;
+    window.WEDNESDAY_SUPABASE_CLIENT = null;
     supabaseAuthReady = false;
     window.WEDNESDAY_LOCAL_MODE = true;
 
@@ -1309,6 +1311,7 @@ function initializeSupabase() {
       config.url,
       config.key
     );
+    window.WEDNESDAY_SUPABASE_CLIENT = supabaseClient;
 
     supabaseAuthReady = true;
     window.WEDNESDAY_LOCAL_MODE = false;
