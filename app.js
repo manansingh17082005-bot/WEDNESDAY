@@ -683,7 +683,10 @@ function getLeadExcelRows() {
       "Email": lead.email || "",
       "Website": lead.website || "",
       "City": $("lead-location")?.value.trim() || "",
-      "Source URL": lead.website || ""
+      "Source URL": lead.website || "",
+      "Research Priority": getLeadResearchPriority(lead),
+      "Priority Tier": lead.priorityTier || "Needs review",
+      "Qualification Signals": (lead.qualificationReasons || []).join("; ")
     };
   });
 }
@@ -703,7 +706,7 @@ function downloadLeadExcel() {
   const leadsSheet = XLSX.utils.json_to_sheet(rows);
   leadsSheet["!cols"] = [
     { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 27 }, { wch: 20 },
-    { wch: 30 }, { wch: 38 }, { wch: 18 }, { wch: 42 }
+    { wch: 30 }, { wch: 38 }, { wch: 18 }, { wch: 42 }, { wch: 18 }, { wch: 24 }, { wch: 70 }
   ];
   leadsSheet["!autofilter"] = { ref: leadsSheet["!ref"] || "A1:I1" };
   leadsSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
@@ -730,6 +733,7 @@ function downloadLeadExcel() {
 }
 
 function getLeadResearchPriority(lead) {
+  if (Number.isFinite(Number(lead.priorityScore))) return Math.max(0, Math.min(100, Number(lead.priorityScore)));
   const text = [lead.name, lead.snippet, lead.website, lead.source].filter(Boolean).join(" ").toLowerCase();
   let score = 35;
   if (lead.phone || lead.email || lead.whatsappNumber) score += 20;
@@ -785,13 +789,13 @@ function renderDiscoveredLeads() {
     </div>
     <div class="table-wrap">
       <table class="lead-table">
-        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PRIORITY</th><th>PUBLIC PHONE</th><th>WHATSAPP</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>ACTION</th></tr></thead>
+        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PRIORITY & SIGNALS</th><th>PUBLIC PHONE</th><th>WHATSAPP</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>ACTION</th></tr></thead>
         <tbody>
           ${discoveredLeads.map((lead, index) => `
             <tr>
               <td><input type="checkbox" class="lead-select" data-lead-index="${index}" ${lead.added ? "disabled" : ""}></td>
               <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
-              <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>Research priority</small></td>
+              <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>${escapeHTML(lead.priorityTier || "Heuristic research priority")}</small><br><small>${escapeHTML((lead.qualificationReasons || []).join(" · ") || "No strong buying signal found")}</small></td>
               <td>${escapeHTML(lead.phone || "Not found")}</td>
               <td>${escapeHTML(lead.whatsappNumber ? "+" + lead.whatsappNumber : "Not found / not verified")}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
