@@ -208,6 +208,10 @@ serve(async (request) => {
         status: "Needs review",
         contactVerified: Boolean(phone || email),
         openingDateVerified: false,
+        priorityScore: qualification.score,
+        priorityTier: qualification.tier,
+        qualificationReasons: qualification.reasons,
+        matchedServices: qualification.matchedServices,
       });
       if (leads.length >= limit) break;
     }
