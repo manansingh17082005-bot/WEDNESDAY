@@ -750,7 +750,7 @@ async function prepareLeadOutreach(index) {
     serviceSelect.value = service;
   }
   if ($("outreach-business")) $("outreach-business").value = lead.name || lead.company || "";
-  if ($("outreach-phone")) $("outreach-phone").value = lead.whatsappNumber || lead.phone || "";
+  if ($("outreach-phone")) $("outreach-phone").value = lead.whatsappNumber || "";
   if ($("outreach-observation")) {
     $("outreach-observation").value = lead.snippet
       ? "Public listing information to verify: " + lead.snippet
@@ -762,7 +762,7 @@ async function prepareLeadOutreach(index) {
       "\nResearch priority score: " + getLeadResearchPriority(lead) + "/100 (heuristic, not proof of buying intent).";
   }
   if ($("outreach-channel")) {
-    $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber || lead.phone ? "WhatsApp" : "Instagram DM");
+    $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber ? "WhatsApp" : "Instagram DM");
   }
   showPage("outreach");
   const button = $("outreach-generate-btn");
