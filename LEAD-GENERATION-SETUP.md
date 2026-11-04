@@ -17,6 +17,20 @@ The GitHub Pages interface calls a secure Supabase Edge Function. The Tavily API
 4. Paste the Tavily key as its value and save.
 5. Do not add the key to GitHub, `config.js`, `app.js`, or the website Settings page.
 
+### Add the private owner ID (required)
+
+The Edge Function also checks that the signed-in account is the one allowed to use this private workspace.
+
+1. In the same Supabase project, open **Authentication** → **Users**.
+2. Create your owner account if it does not exist. Keep public sign-ups disabled.
+3. Copy the **User UID** shown for your account. This is the account ID, not your email address.
+4. Open **Edge Functions** → **Secrets** and add:
+   - Name: `WEDNESDAY_OWNER_USER_ID`
+   - Value: your copied User UID
+5. Save the secret. Do not put this UID or any secret key in the public website code.
+
+You need both `TAVILY_API_KEY` and `WEDNESDAY_OWNER_USER_ID` configured before live lead search can work.
+
 Supabase secret instructions: https://supabase.com/docs/guides/functions/secrets
 
 ## 3. Deploy the updated lead-discovery function
