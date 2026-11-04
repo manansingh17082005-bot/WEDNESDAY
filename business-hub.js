@@ -7,7 +7,17 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
   const money = value => new Intl.NumberFormat("en-IN", { style:"currency", currency:"INR", maximumFractionDigits:0 }).format(Number(value)||0);
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) { console.error("Business Hub save failed",e); } };
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) { console.error("Business Hub save failed",e); }
+    const cloud=window.WEDNESDAY_CLOUD_SYNC;
+    if(cloud?.isConnected()) cloud.syncHub(state).then(merged=>{
+      state=merged; localStorage.setItem(KEY,JSON.stringify(state));
+      if($("bh-status")) $("bh-status").textContent="Synced with your signed-in Supabase account.";
+      render();
+    }).catch(error=>{
+      if($("bh-status")) $("bh-status").textContent="Saved on this browser. Cloud sync issue: "+error.message;
+    });
+  };
   const load = () => { try { const raw=JSON.parse(localStorage.getItem(KEY)||"null"); return { ...defaults, ...(raw||{}), profile:{...defaults.profile,...(raw?.profile||{})}, deals:Array.isArray(raw?.deals)?raw.deals:[], money:Array.isArray(raw?.money)?raw.money:[], approvals:Array.isArray(raw?.approvals)?raw.approvals:[] }; } catch { return structuredClone(defaults); } };
   const id = () => crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random().toString(16).slice(2);
   const today = () => new Date().toISOString().slice(0,10);
@@ -37,6 +47,17 @@
   function init() {
     if (!$("page-business-hub")) return;
     state=load();
+    window.addEventListener("wednesday-cloud-ready", async()=>{
+      if(!window.WEDNESDAY_CLOUD_SYNC?.isConnected()) return;
+      try {
+        state=await window.WEDNESDAY_CLOUD_SYNC.syncHub(state);
+        localStorage.setItem(KEY,JSON.stringify(state));
+        $("bh-status").textContent="Cloud sync connected. Your business records are synchronised.";
+        render();
+      } catch(error) {
+        $("bh-status").textContent="Local records remain available. Cloud sync issue: "+error.message;
+      }
+    });
     $("bh-deal-form").addEventListener("submit",e=>{e.preventDefault();state.deals.unshift({id:id(),business:$("bh-business").value.trim(),contact:$("bh-contact").value.trim(),service:$("bh-service").value,market:$("bh-market").value,value:Number($("bh-value").value)||0,stage:$("bh-stage").value,followup:$("bh-followup").value,createdAt:new Date().toISOString()});save();e.target.reset();$("bh-followup").value=today();render();});
     $("bh-money-form").addEventListener("submit",e=>{e.preventDefault();state.money.push({id:id(),label:$("bh-money-label").value.trim(),kind:$("bh-money-kind").value,state:$("bh-money-state").value,amount:Number($("bh-money-amount").value),date:$("bh-money-date").value||today()});save();e.target.reset();$("bh-money-date").value=today();render();});
     $("bh-profile-form").addEventListener("submit",e=>{e.preventDefault();state.profile={model:$("bh-profile-model").value,market:$("bh-profile-market").value,approval:true};save();$("bh-status").textContent="Business preferences saved in this browser.";});
