@@ -21,7 +21,7 @@ Supabase secret instructions: https://supabase.com/docs/guides/functions/secrets
 
 ## 3. Deploy the updated lead-discovery function
 
-The repository function has been updated to use Tavily Basic Search. It makes one basic search request per lead search to conserve the free allowance.
+The repository function uses Tavily Basic Search and now adds a transparent prospect qualification score. It searches for service-fit clues and public project/hiring language, then sorts results by research priority. The score is not a probability of hiring and must never be presented as one. It makes one basic search request per lead search to conserve the free allowance.
 
 1. In the Supabase project, open **Edge Functions**.
 2. Choose **Deploy a new function** → **Via Editor**, or open the existing `lead-discovery` function to edit it.
@@ -48,7 +48,7 @@ Supabase dashboard deployment guide: https://supabase.com/docs/guides/functions/
 4. Click **Find Real Leads**.
 5. Review each public result and select records to add to **Client CRM**.
 
-Tavily web search is not a dedicated Google Maps/Places directory. It may return business websites, directories, social pages, and articles. Phone numbers or emails are extracted only when present in the returned public content; missing details remain blank. Search results do not prove that a business is newly opened, wants your service, or has budget. Verify every business and contact before outreach.
+Tavily web search is not a dedicated Google Maps/Places directory. It may return business websites, directories, social pages, and articles. Phone numbers or emails are extracted only when present in the returned public content; missing details remain blank. WEDNESDAY assigns a 0–100 research-priority score using observable phrases in the returned title/snippet, service-fit clues, public contact availability and source type. A high score means “review this prospect first”; it does not mean a 75% or 90% chance of hiring. Search results do not prove that a business wants your service or has budget. Verify every business, the exact need, and contact before outreach.
 
 ## WhatsApp outreach
 
