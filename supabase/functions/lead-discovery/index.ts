@@ -21,9 +21,17 @@ const json = (body: unknown, status = 200, origin: string | null = null) =>
     headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 
-function extractPublicPhone(text: string): string {
-  const match = text.match(/(?:\+?91[\s-]?)?([6-9]\d{9})/);
-  return match ? `+91 ${match[1]}` : "";
+function extractPublicPhone(text: string, location: string): string {
+  const international = text.match(/(?:\+|00)\s*(\d[\d\s().-]{6,18}\d)/);
+  if (international) {
+    const digits = international[1].replace(/\D/g, "");
+    if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  }
+  if (/\bindia\b/i.test(location)) {
+    const local = text.match(/(?:^|\D)([6-9]\d{9})(?!\d)/);
+    if (local) return `+91 ${local[1]}`;
+  }
+  return "";
 }
 
 function extractPublicEmail(text: string): string {
@@ -79,6 +87,11 @@ serve(async (request) => {
     const market = String(input.market || "both").trim().slice(0, 30);
     const businessModel = String(input.businessModel || "both").trim().slice(0, 30);
     const services = Array.isArray(input.services) ? input.services.map((x: unknown) => String(x).slice(0, 60)).slice(0, 10) : [];
+    const sources = Array.isArray(input.sources) ? input.sources.map((x: unknown) => String(x).slice(0, 40)).slice(0, 10) : [];
+    const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
+    const prioritiseNoWebsite = filters.noWebsite === true;
+    const prioritiseWeakSocial = filters.weakSocial === true;
+    const prioritisePublicContact = filters.publicContact === true;
     const limit = Math.max(1, Math.min(25, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
@@ -88,8 +101,12 @@ serve(async (request) => {
       location,
       keywords,
       services.join(" "),
+      sources.length ? `public pages and listings from ${sources.join(" ")}` : "",
       market === "international" ? "international business" : market === "india" ? "India-based business" : "",
       businessModel === "agency" ? "business needing creative agency marketing services" : businessModel === "freelance" ? "business needing freelance professional services" : "",
+      prioritiseNoWebsite ? "small business website missing no official website" : "",
+      prioritiseWeakSocial ? "business social media page inactive irregular posting low engagement" : "",
+      prioritisePublicContact ? "public business phone email contact details" : "business official contact website",
       "business contact phone address official website"
     ].filter(Boolean).join(" ");
 
@@ -137,7 +154,7 @@ serve(async (request) => {
       seen.add(key);
 
       const combined = `${title} ${content} ${url}`;
-      const phone = extractPublicPhone(combined);
+      const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
       const whatsappNumber = extractPublicWhatsApp(combined);
       let host = "";
