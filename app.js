@@ -604,6 +604,7 @@ function renderClients() {
       if (!client || !window.confirm(`Delete ${client.name} from your client table?`)) return;
       clients = clients.filter(item => item.id !== button.dataset.clientDelete);
       saveData(STORAGE_KEYS.clients, clients);
+      window.WEDNESDAY_CLOUD_SYNC?.syncClients(clients).catch(error => console.warn('CRM cloud sync:', error.message));
       renderClients();
     });
   });
@@ -639,6 +640,7 @@ function initializeClients() {
     });
 
     saveData(STORAGE_KEYS.clients, clients);
+    window.WEDNESDAY_CLOUD_SYNC?.syncClients(clients).catch(error => console.warn('CRM cloud sync:', error.message));
     form.reset();
     renderClients();
     showStatus("client-status-message", "Client saved in this browser.");
@@ -1510,6 +1512,12 @@ function initializeSettings() {
 }
 
 /* ================= APPLICATION STARTUP ================= */
+
+window.addEventListener("wednesday-clients-synced", event => {
+  clients = Array.isArray(event.detail) ? event.detail : clients;
+  saveData(STORAGE_KEYS.clients, clients);
+  renderClients();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeSupabase();
