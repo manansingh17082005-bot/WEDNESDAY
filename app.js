@@ -895,7 +895,7 @@ function initializeLeadGeneration() {
         if (!sessionData?.session) throw new Error("Please sign in to WEDNESDAY before searching.");
 
         const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
-          body: { businessType, location, keywords, limit, sources, services, market, businessModel }
+          body: { businessType, location, keywords, limit, sources, services, market, businessModel, filters: { noWebsite: Boolean($("lead-filter-website")?.checked), weakSocial: Boolean($("lead-filter-social")?.checked), publicContact: Boolean($("lead-filter-contact")?.checked) } }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
