@@ -9,6 +9,15 @@
     return data.user;
   }
   async function syncRows(db, user, table, localRows, toDb, fromDb) {
+    const tracker = "wednesday_cloud_known_" + table;
+    let previouslySynced = [];
+    try { previouslySynced = JSON.parse(localStorage.getItem(tracker) || "[]"); } catch (_) {}
+    const localIds = new Set((localRows || []).map(row => String(row.id)));
+    const removedIds = previouslySynced.filter(id => !localIds.has(String(id)));
+    if (removedIds.length) {
+      const { error: deleteError } = await db.from(table).delete().eq("user_id", user.id).in("id", removedIds);
+      if (deleteError) throw new Error(table + " delete: " + deleteError.message);
+    }
     const { data: remote, error } = await db.from(table).select("*").eq("user_id", user.id);
     if (error) throw new Error(table + ": " + error.message);
     const merged = new Map((remote || []).map(row => [String(row.id), fromDb(row)]));
@@ -19,6 +28,7 @@
       const { error: writeError } = await db.from(table).upsert(payload, { onConflict: "id" });
       if (writeError) throw new Error(table + ": " + writeError.message);
     }
+    try { localStorage.setItem(tracker, JSON.stringify(rows.map(row => String(row.id)))); } catch (_) {}
     return rows;
   }
   async function syncClients(local) {
