@@ -733,7 +733,7 @@ function getLeadResearchPriority(lead) {
   const text = [lead.name, lead.snippet, lead.website, lead.source].filter(Boolean).join(" ").toLowerCase();
   let score = 35;
   if (lead.phone || lead.email || lead.whatsappNumber) score += 20;
-  if (lead.website && !/instagram\\.com|facebook\\.com|linkedin\\.com|justdial\\.com/i.test(lead.website)) score += 10;
+  if (lead.website && !/instagram\.com|facebook\.com|linkedin\.com|justdial\.com/i.test(lead.website)) score += 10;
   const signals = ["newly opened", "opening soon", "recently opened", "small business", "local business", "contact us", "book now", "menu", "services", "appointment", "business"];
   score += Math.min(25, signals.filter(term => text.includes(term)).length * 5);
   if (!lead.snippet) score -= 5;
@@ -758,8 +758,8 @@ async function prepareLeadOutreach(index) {
   }
   if ($("outreach-context")) {
     $("outreach-context").value = "Source: " + (lead.website || "Public web search") +
-      "\\nLocation searched: " + ($("lead-location")?.value.trim() || "Not specified") +
-      "\\nResearch priority score: " + getLeadResearchPriority(lead) + "/100 (heuristic, not proof of buying intent).";
+      "\nLocation searched: " + ($("lead-location")?.value.trim() || "Not specified") +
+      "\nResearch priority score: " + getLeadResearchPriority(lead) + "/100 (heuristic, not proof of buying intent).";
   }
   if ($("outreach-channel")) {
     $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber || lead.phone ? "WhatsApp" : "Instagram DM");
