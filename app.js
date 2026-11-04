@@ -289,6 +289,7 @@ async function askWednesdayOnce(prompt) {
 
 const pageTitles = {
   overview: "Overview",
+  "dashboard-builder": "Dashboard Studio",
   assistant: "WEDNESDAY Assistant",
   "lead-generation": "Lead Generation",
   clients: "Client Management",
