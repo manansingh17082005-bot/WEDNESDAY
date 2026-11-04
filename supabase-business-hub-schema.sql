@@ -64,3 +64,9 @@ create index if not exists business_transactions_user_date_idx
   on public.business_transactions(user_id, transaction_date desc);
 create index if not exists outreach_approvals_user_created_idx
   on public.outreach_approvals(user_id, created_at desc);
+
+-- Add CRM contact fields needed for cloud synchronisation.
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS company text;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS notes text;
