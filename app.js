@@ -57,6 +57,7 @@ let discoveredLeads = [];
 
 let supabaseClient = null;
 let supabaseAuthReady = false;
+window.WEDNESDAY_SUPABASE_CLIENT = null;
 
 window.WEDNESDAY_LOCAL_MODE = true;
 window.WEDNESDAY_PAUSED = false;
@@ -604,6 +605,7 @@ function renderClients() {
       if (!client || !window.confirm(`Delete ${client.name} from your client table?`)) return;
       clients = clients.filter(item => item.id !== button.dataset.clientDelete);
       saveData(STORAGE_KEYS.clients, clients);
+      window.WEDNESDAY_CLOUD_SYNC?.syncClients(clients).catch(error => console.warn('CRM cloud sync:', error.message));
       renderClients();
     });
   });
@@ -639,6 +641,7 @@ function initializeClients() {
     });
 
     saveData(STORAGE_KEYS.clients, clients);
+    window.WEDNESDAY_CLOUD_SYNC?.syncClients(clients).catch(error => console.warn('CRM cloud sync:', error.message));
     form.reset();
     renderClients();
     showStatus("client-status-message", "Client saved in this browser.");
@@ -1339,6 +1342,7 @@ function initializeSupabase() {
     !window.supabase?.createClient
   ) {
     supabaseClient = null;
+    window.WEDNESDAY_SUPABASE_CLIENT = null;
     supabaseAuthReady = false;
     window.WEDNESDAY_LOCAL_MODE = true;
 
@@ -1358,6 +1362,7 @@ function initializeSupabase() {
       config.url,
       config.key
     );
+    window.WEDNESDAY_SUPABASE_CLIENT = supabaseClient;
 
     supabaseAuthReady = true;
     window.WEDNESDAY_LOCAL_MODE = false;
@@ -1556,6 +1561,12 @@ function initializeSettings() {
 }
 
 /* ================= APPLICATION STARTUP ================= */
+
+window.addEventListener("wednesday-clients-synced", event => {
+  clients = Array.isArray(event.detail) ? event.detail : clients;
+  saveData(STORAGE_KEYS.clients, clients);
+  renderClients();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   initializeSupabase();
