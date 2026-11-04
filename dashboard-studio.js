@@ -22,15 +22,22 @@
   function options(id, values, preferred){
     const el=$(id); if(!el)return;
     el.innerHTML=values.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join("");
+    el.disabled = values.length === 0;
     if(preferred && values.includes(preferred))el.value=preferred;
+  }
+  function populateFilter(){
+    const category=$("dash-category")?.value;
+    const filter=$("dash-filter");
+    if(!filter)return;
+    const values=category?[...new Set(rows.map(r=>String(r[category]??"").trim()).filter(Boolean))]:[];
+    filter.innerHTML='<option value="">All records</option>'+values.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join("");
   }
   function populateControls(){
     const cols=inferColumns(rows);
     options("dash-metric",cols.numericCols,cols.numericCols[0]);
     options("dash-category",cols.categoryCols,cols.categoryCols[0]);
     options("dash-kpi",cols.numericCols,cols.numericCols[0]);
-    const filter=$("dash-filter");
-    if(filter){filter.innerHTML='<option value="">All records</option>'+cols.categoryCols.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join("");}
+    populateFilter();
     $("dash-build-btn").disabled=!rows.length;
     setStatus(rows.length+" rows loaded · "+headers.length+" columns detected.");
     renderPreview();
@@ -103,7 +110,8 @@
     const upload=$("dash-file");
     upload?.addEventListener("change",e=>readFile(e.target.files?.[0]));
     $("dash-build-btn")?.addEventListener("click",renderPreview);
-    ["dash-metric","dash-category","dash-chart-type","dash-kpi","dash-filter"].forEach(id=>$(id)?.addEventListener("change",renderPreview));
+    ["dash-metric","dash-chart-type","dash-kpi","dash-filter"].forEach(id=>$(id)?.addEventListener("change",renderPreview));
+    $("dash-category")?.addEventListener("change",()=>{populateFilter();renderPreview();});
     $("dash-save-btn")?.addEventListener("click",saveDashboard);
     $("dash-export-btn")?.addEventListener("click",exportDashboard);
     $("dash-name")?.addEventListener("input",()=>{if(rows.length)currentDashboard.name=$("dash-name").value;});
