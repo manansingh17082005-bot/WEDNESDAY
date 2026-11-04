@@ -551,6 +551,7 @@ function initializeChat() {
       }
 
       setWednesdayCharacterState("error");
+      window.WEDNESDAY_HANDSFREE?.resumeAfterRequest?.();
     } finally {
       if (requestId === activeRequestId) {
         activeRequestController = null;
