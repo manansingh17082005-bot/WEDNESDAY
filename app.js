@@ -729,6 +729,46 @@ function downloadLeadExcel() {
   showStatus("lead-search-status", "Your Excel lead report is ready. Check your Downloads folder.");
 }
 
+function getLeadResearchPriority(lead) {
+  const text = [lead.name, lead.snippet, lead.website, lead.source].filter(Boolean).join(" ").toLowerCase();
+  let score = 35;
+  if (lead.phone || lead.email || lead.whatsappNumber) score += 20;
+  if (lead.website && !/instagram\\.com|facebook\\.com|linkedin\\.com|justdial\\.com/i.test(lead.website)) score += 10;
+  const signals = ["newly opened", "opening soon", "recently opened", "small business", "local business", "contact us", "book now", "menu", "services", "appointment", "business"];
+  score += Math.min(25, signals.filter(term => text.includes(term)).length * 5);
+  if (!lead.snippet) score -= 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+async function prepareLeadOutreach(index) {
+  const lead = discoveredLeads[index];
+  if (!lead) return;
+  const services = getCheckedValues("lead-service");
+  const service = services[0] || "Social Media Management";
+  const serviceSelect = $("outreach-service");
+  if (serviceSelect && [...serviceSelect.options].some(option => option.value === service)) {
+    serviceSelect.value = service;
+  }
+  if ($("outreach-business")) $("outreach-business").value = lead.name || lead.company || "";
+  if ($("outreach-phone")) $("outreach-phone").value = lead.whatsappNumber || lead.phone || "";
+  if ($("outreach-observation")) {
+    $("outreach-observation").value = lead.snippet
+      ? "Public listing information to verify: " + lead.snippet
+      : "Review the business website and public profile before making a specific claim.";
+  }
+  if ($("outreach-context")) {
+    $("outreach-context").value = "Source: " + (lead.website || "Public web search") +
+      "\\nLocation searched: " + ($("lead-location")?.value.trim() || "Not specified") +
+      "\\nResearch priority score: " + getLeadResearchPriority(lead) + "/100 (heuristic, not proof of buying intent).";
+  }
+  if ($("outreach-channel")) {
+    $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber || lead.phone ? "WhatsApp" : "Instagram DM");
+  }
+  showPage("outreach");
+  const button = $("outreach-generate-btn");
+  if (button) button.click();
+}
+
 function renderDiscoveredLeads() {
   const output = $("lead-search-results");
   if (!output) return;
@@ -745,18 +785,19 @@ function renderDiscoveredLeads() {
     </div>
     <div class="table-wrap">
       <table class="lead-table">
-        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PUBLIC PHONE</th><th>WHATSAPP</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>OPENING DATE</th></tr></thead>
+        <thead><tr><th></th><th>BUSINESS / RESULT</th><th>PRIORITY</th><th>PUBLIC PHONE</th><th>WHATSAPP</th><th>EMAIL</th><th>SOURCE</th><th>CONTACT</th><th>ACTION</th></tr></thead>
         <tbody>
           ${discoveredLeads.map((lead, index) => `
             <tr>
               <td><input type="checkbox" class="lead-select" data-lead-index="${index}" ${lead.added ? "disabled" : ""}></td>
               <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
+              <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>Research priority</small></td>
               <td>${escapeHTML(lead.phone || "Not found")}</td>
               <td>${escapeHTML(lead.whatsappNumber ? "+" + lead.whatsappNumber : "Not found / not verified")}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
               <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
-              <td><span class="client-status">${lead.openingDateVerified ? "Verified" : "Not verified"}</span></td>
+              <td><button type="button" class="secondary-btn" data-lead-outreach="${index}">Prepare AI pitch ↗</button></td>
             </tr>`
           ).join("")}
         </tbody>
@@ -766,6 +807,9 @@ function renderDiscoveredLeads() {
   `;
 
   $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);
+  output.querySelectorAll("[data-lead-outreach]").forEach(button => {
+    button.addEventListener("click", () => prepareLeadOutreach(Number(button.dataset.leadOutreach)));
+  });
 
   $("lead-select-all")?.addEventListener("change", event => {
     document.querySelectorAll(".lead-select:not(:disabled)").forEach(box => { box.checked = event.target.checked; });
