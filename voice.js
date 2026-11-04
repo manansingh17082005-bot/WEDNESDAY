@@ -1,11 +1,7 @@
-/* WEDNESDAY voice controller
-   Browser speech recognition + spoken replies.
-   Start listening only after the user clicks Activate wake word.
-   Browser speech recognition may use the browser vendor's speech service.
-*/
+/* WEDNESDAY hands-free voice: speak naturally without a wake phrase.
+   Click Start listening once to grant microphone permission. */
 (() => {
   "use strict";
-
   const $ = id => document.getElementById(id);
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -13,23 +9,20 @@
   let enabled = false;
   let listening = false;
   let speaking = false;
+  let processing = false;
   let restarting = false;
   let restartTimer = null;
-  let awaitingWakeCommand = false;
+  let finalTranscript = "";
+  let lastFinalAt = 0;
 
-  const WAKE_PATTERN = /\b(?:hey|hi|hello|okay|ok)\s+(?:wednesday|wensday|wens\s*day|wins\s*day)\b/i;
-  const STOP_PATTERN = /^(?:stop listening|disable listening|go to sleep|pause voice)$/i;
+  const STOP_PATTERN = /^(stop listening|pause voice|disable voice|go to sleep)$/i;
 
   function status(message, state = "idle") {
     const el = $("wednesday-voice-status");
-    if (el) {
-      el.textContent = message;
-      el.dataset.state = state;
-    }
-
+    if (el) { el.textContent = message; el.dataset.state = state; }
     const btn = $("wednesday-handsfree");
     if (btn) {
-      btn.textContent = enabled ? "🎙 Wake word is ON · Turn off" : "🎙 Activate wake word";
+      btn.textContent = enabled ? "🎙 Listening is ON · Pause" : "🎙 Start listening";
       btn.setAttribute("aria-pressed", String(enabled));
       btn.classList.toggle("voice-active", enabled);
     }
@@ -39,159 +32,127 @@
 
   function stopRecognition() {
     if (!recognition) return;
-    try {
-      recognition.stop();
-    } catch (_) {}
+    try { recognition.stop(); } catch (_) {}
   }
 
-  function scheduleRestart(delay = 700) {
+  function scheduleRestart(delay = 900) {
     clearTimeout(restartTimer);
-    if (!enabled || speaking || listening || restarting || !recognition) return;
-
+    if (!enabled || speaking || processing || listening || restarting || !recognition) return;
     restartTimer = setTimeout(() => {
-      if (!enabled || speaking || listening || restarting || !recognition) return;
-      try {
-        restarting = true;
-        recognition.start();
-      } catch (error) {
+      if (!enabled || speaking || processing || listening || restarting) return;
+      try { restarting = true; recognition.start(); }
+      catch (error) {
         restarting = false;
-        // InvalidStateError usually means the browser is already starting it.
         if (error?.name !== "InvalidStateError") {
-          status("Couldn't restart voice input. Tap the wake-word button to try again.", "error");
+          status("Couldn't restart microphone listening. Press Start listening to retry.", "error");
         }
       }
     }, delay);
   }
 
   function speak(text) {
-    if (!("speechSynthesis" in window) || !text) return;
-
+    if (!("speechSynthesis" in window) || !text) {
+      processing = false;
+      scheduleRestart();
+      return;
+    }
     const clean = String(text)
       .replace(/\*{1,3}|#{1,6}\s?/g, "")
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
       .slice(0, 5000);
-
-    if (!clean.trim()) return;
+    if (!clean.trim()) { processing = false; scheduleRestart(); return; }
 
     window.speechSynthesis.cancel();
+    processing = false;
     speaking = true;
     stopRecognition();
 
     const utterance = new SpeechSynthesisUtterance(clean);
     const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find(v => /^en-IN$/i.test(v.lang)) ||
+    const preferred = voices.find(v => /^en-IN$/i.test(v.lang)) ||
       voices.find(v => /^en-GB$/i.test(v.lang)) ||
       voices.find(v => /^en-US$/i.test(v.lang)) ||
       voices.find(v => /^en/i.test(v.lang));
-
     if (preferred) utterance.voice = preferred;
     utterance.rate = 1.02;
     utterance.pitch = 1.08;
     utterance.volume = 1;
-
     utterance.onstart = () => setState("speaking");
     const finish = () => {
       speaking = false;
       setState("idle");
-      if (enabled) scheduleRestart(900);
+      if (enabled) scheduleRestart(1000);
     };
     utterance.onend = finish;
     utterance.onerror = finish;
-
     window.speechSynthesis.speak(utterance);
   }
-
   window.WEDNESDAY_SPEAK = speak;
 
   function submitCommand(text) {
-    const input = $("chat-input");
-    const form = $("chat-form");
-    if (!input || !form || !text.trim()) return;
-
-    input.value = text.trim();
+    const input = $("chat-input"), form = $("chat-form");
+    const command = String(text || "").trim();
+    if (!input || !form || !command) {
+      processing = false;
+      scheduleRestart();
+      return;
+    }
+    processing = true;
+    status("I heard you. Thinking…", "busy");
+    input.value = command;
     form.requestSubmit();
   }
 
-  function handleTranscript(rawText) {
-    const heard = String(rawText || "").trim();
+  function handleFinalTranscript(text) {
+    const heard = String(text || "").trim();
     if (!heard) return;
-
-    if (STOP_PATTERN.test(heard)) {
-      disable();
-      return;
-    }
-
-    if (awaitingWakeCommand) {
-      awaitingWakeCommand = false;
-      status("Heard your request. Processing…", "busy");
-      submitCommand(heard);
-      return;
-    }
-
-    const match = WAKE_PATTERN.exec(heard);
-    if (!match) {
-      // Show the actual transcript so the user can tell whether the
-      // microphone heard them but misrecognised the wake phrase.
-      status('Heard: "' + heard + '" · Say “Hey Wednesday” to start.', "listening");
-      return;
-    }
-
-    const command = heard.slice(match.index + match[0].length)
-      .replace(/^[\s,.:;!?-]+/, "")
-      .trim();
-
-    if (command) {
-      status("Wake phrase detected. Processing your request…", "busy");
-      submitCommand(command);
-      stopRecognition();
-      return;
-    }
-
-    awaitingWakeCommand = true;
-    status("Wake phrase detected. I'm listening for your request…", "listening");
-    speak("I'm listening. What would you like me to do?");
+    if (STOP_PATTERN.test(heard)) { disable(); return; }
+    submitCommand(heard);
+    stopRecognition();
   }
 
   function setupRecognition() {
     if (!Recognition) {
-      status("Voice input isn't supported in this browser. Please use an up-to-date version of Chrome or Edge.", "error");
+      status("Speech recognition isn't supported in this browser. Please use the latest Chrome or Edge.", "error");
       return false;
     }
-
     recognition = new Recognition();
     recognition.lang = "en-IN";
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       clearTimeout(restartTimer);
       restarting = false;
       listening = true;
-      if (enabled && !speaking) {
-        status("Listening for “Hey Wednesday”…", "listening");
+      if (enabled && !speaking && !processing) {
+        status("I'm listening. Speak naturally — no wake phrase needed.", "listening");
         setState("listening");
       }
     };
 
     recognition.onresult = event => {
+      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (!result.isFinal) {
-          const interim = result[0]?.transcript?.trim();
-          if (interim) {
-            const el = $("wednesday-voice-status");
-            if (el) el.textContent = "Hearing: " + interim;
-          }
-          continue;
-        }
+        const transcript = result[0]?.transcript || "";
+        if (result.isFinal) finalTranscript += (finalTranscript ? " " : "") + transcript.trim();
+        else interim += transcript;
+      }
+      if (interim.trim() && !processing) {
+        const el = $("wednesday-voice-status");
+        if (el) el.textContent = "Hearing: " + interim.trim();
+      }
 
-        // Try the browser's alternative transcripts as well. This helps
-        // when it hears the name Wednesday with a slightly different spelling.
-        const alternatives = Array.from(result).map(item => item.transcript || "");
-        const candidate = alternatives.find(text => WAKE_PATTERN.test(text)) || alternatives[0] || "";
-        handleTranscript(candidate);
+      if (finalTranscript.trim()) {
+        const now = Date.now();
+        // Ignore duplicate final callbacks delivered within the same short utterance.
+        if (now - lastFinalAt < 350) return;
+        lastFinalAt = now;
+        const phrase = finalTranscript.trim();
+        finalTranscript = "";
+        handleFinalTranscript(phrase);
       }
     };
 
@@ -200,97 +161,88 @@
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         enabled = false;
         listening = false;
-        status("Microphone permission is blocked. Allow microphone access for this website in Chrome site settings, then activate again.", "error");
+        status("Microphone permission is blocked. Allow microphone access for this site in Chrome settings, then press Start listening.", "error");
       } else if (event.error === "audio-capture") {
-        status("No microphone was found. Check your microphone connection and Windows input settings.", "error");
+        enabled = false;
+        status("No microphone detected. Check your microphone connection and Windows input settings.", "error");
       } else if (event.error === "network") {
-        status("The browser speech service is unavailable. Check your internet connection and try again.", "error");
+        status("The browser's speech recognition service is unavailable. Check your internet connection.", "error");
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
-        status("Voice input error: " + event.error + ". Retrying…", "error");
+        status("Speech recognition error: " + event.error + ". Trying again…", "error");
       }
     };
 
     recognition.onend = () => {
       listening = false;
       restarting = false;
-      if (enabled && !speaking) scheduleRestart(800);
+      if (enabled && !speaking && !processing) scheduleRestart(800);
       else if (!enabled) setState("idle");
     };
-
     return true;
   }
 
   function enable() {
-    if (!Recognition) {
-      if (!recognition) setupRecognition();
-      return;
-    }
     if (!recognition && !setupRecognition()) return;
-
     enabled = true;
-    awaitingWakeCommand = false;
+    processing = false;
+    finalTranscript = "";
     status("Starting microphone…", "listening");
-
-    // Call start directly from the click handler so the browser can show
-    // its microphone permission prompt in response to a user gesture.
     try {
       restarting = true;
       recognition.start();
     } catch (error) {
       restarting = false;
       if (error?.name === "InvalidStateError") {
-        status("Voice input is already starting. Wait a moment and say “Hey Wednesday”.", "listening");
+        status("Microphone is starting. You can speak naturally now.", "listening");
       } else {
-        status("Couldn't start the microphone. Check site permissions and try again.", "error");
-        scheduleRestart(1000);
+        status("Couldn't start microphone. Check site permissions and try again.", "error");
       }
     }
   }
 
   function disable() {
     enabled = false;
-    awaitingWakeCommand = false;
+    processing = false;
+    finalTranscript = "";
     clearTimeout(restartTimer);
-    listening = false;
     stopRecognition();
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     speaking = false;
-    status("Voice paused. Activate wake word when you're ready.");
+    status("Voice paused. Press Start listening when you're ready.");
     setState("idle");
+  }
+
+  function resumeAfterRequest() {
+    processing = false;
+    if (enabled && !speaking) scheduleRestart(700);
   }
 
   function addControls() {
     const form = $("chat-form");
     if (!form || $("wednesday-handsfree")) return;
-
     const btn = document.createElement("button");
     btn.type = "button";
     btn.id = "wednesday-handsfree";
     btn.className = "secondary-btn handsfree-button";
-    btn.textContent = "🎙 Activate wake word";
+    btn.textContent = "🎙 Start listening";
     btn.setAttribute("aria-pressed", "false");
     btn.addEventListener("click", () => enabled ? disable() : enable());
-
     const send = form.querySelector('button[type="submit"]');
-    if (send) form.insertBefore(btn, send);
-    else form.append(btn);
+    if (send) form.insertBefore(btn, send); else form.append(btn);
 
     const note = document.createElement("small");
     note.id = "wednesday-voice-status";
     note.className = "voice-status";
     note.setAttribute("role", "status");
     note.setAttribute("aria-live", "polite");
-    note.textContent = "Click Activate wake word and allow microphone access. Then say “Hey Wednesday”.";
+    note.textContent = "Press Start listening once, allow microphone access, then talk normally. No wake phrase required.";
     form.insertAdjacentElement("afterend", note);
   }
 
   document.addEventListener("DOMContentLoaded", addControls);
   if (document.readyState !== "loading") addControls();
-
   window.WEDNESDAY_HANDSFREE = {
-    enable,
-    disable,
-    speak,
+    enable, disable, speak, resumeAfterRequest,
     get enabled() { return enabled; },
     get listening() { return listening; }
   };
