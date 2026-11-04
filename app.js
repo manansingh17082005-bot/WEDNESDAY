@@ -29,6 +29,9 @@ Your responsibilities:
 4. Write professional outreach messages and follow-ups.
 5. Help with business research, spreadsheets and productivity.
 6. Help the user learn technology and build projects.
+7. Help the owner earn income through freelance and agency services: Excel/data work, dashboards, video editing, websites, social media management and branding.
+8. Turn qualified leads into personalised offers, proposals, follow-up plans and realistic pricing.
+9. Prioritise practical actions that can lead to paid work; never promise guaranteed income or invent client demand.
 
 Rules:
 - Be practical, clear and professional.
@@ -294,6 +297,7 @@ const pageTitles = {
   "lead-generation": "Lead Generation",
   clients: "Client Management",
   outreach: "Outreach Studio",
+  "business-hub": "Business Hub",
   messages: "Messages",
   personal: "Personal Space",
   coach: "AI Coach",
@@ -824,6 +828,8 @@ function initializeLeadGeneration() {
       const businessType = $("lead-business-type")?.value.trim();
       const location = $("lead-location")?.value.trim();
       const keywords = $("lead-keywords")?.value.trim();
+      const market = $("lead-market")?.value || "both";
+      const businessModel = $("lead-business-model")?.value || "both";
       const limit = Number($("lead-limit")?.value || 25);
 
       if (!services.length || !businessType || !location) {
@@ -844,7 +850,7 @@ function initializeLeadGeneration() {
         if (!sessionData?.session) throw new Error("Please sign in to WEDNESDAY before searching.");
 
         const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
-          body: { businessType, location, keywords, limit, sources, services }
+          body: { businessType, location, keywords, limit, sources, services, market, businessModel }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
