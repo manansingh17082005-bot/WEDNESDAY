@@ -1,8 +1,10 @@
-const CACHE = "wednesday-command-center-v4";
+const CACHE = "wednesday-command-center-v5";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./dashboard-studio.css",
+  "./dashboard-studio.js",
   "./wednesday-cartoon-theme.css",
   "./companions.css",
   "./companions.js",
