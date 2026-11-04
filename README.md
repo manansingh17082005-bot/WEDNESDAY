@@ -1,51 +1,46 @@
-# WEDNESDAY — Foundation Build
+# WEDNESDAY — Personal AI Command Center
 
-A responsive, installable web-app foundation for Windows, Android, iPhone and iPad.
+WEDNESDAY is a responsive, installable web workspace for personal assistance, lead research, Excel work, client tracking and dashboard creation.
 
-## What's included
-- Responsive command-center dashboard and navigation
-- Local demo task list and client CRM interactions
-- AI chat interface clearly marked as not connected
-- Gmail / WhatsApp integration placeholders
-- English coaching and personal-assistant sections
-- Owner control / pause switch
-- PWA manifest and service worker
-- Supabase SQL schema with per-user Row Level Security
+## Current modules
+- Overview and task list
+- AI assistant with Shinchan, Himawari and Shiro companion profiles
+- Lead discovery through the secured Supabase Edge Function
+- Client CRM and outreach draft tools
+- WhatsApp reply drafting with manual user approval
+- English coach and personal workspace
+- **Dashboard Studio:** import Excel/CSV, detect numeric and category fields, create KPI cards, bar/line/doughnut charts, filter records, preview a data table, save dashboards in the browser and export workbook data
 
-## Run locally
-You can open `index.html` for a basic preview. For PWA/service-worker testing, serve the folder over localhost, for example:
+## Dashboard Studio
+1. Open **Dashboard Studio** from the sidebar.
+2. Import an .xlsx, .xls or .csv file.
+3. Choose a numeric metric, category, KPI field and chart type.
+4. Build the dashboard, apply a category filter, then save or export it.
+
+The first worksheet is used for Excel files. The browser processes up to 10,000 rows in this version. Uploaded data and saved dashboard definitions stay in the current browser's local storage/session workflow; they are not uploaded to Supabase or shared across devices. Avoid importing sensitive personal or financial data on a shared computer.
+
+## AI and hosting limitations
+- The current chat engine uses Ollama at `http://localhost:11434`. This only works when Ollama is running on the same computer as the browser. A public GitHub Pages visitor cannot use the owner's local Ollama automatically.
+- To make AI available to signed-in users on phones and other devices, connect a secure server-side AI provider through a Supabase Edge Function. Keep provider API keys in server secrets only.
+- Live lead search requires owner authentication, a deployed `lead-discovery` Edge Function and the `TAVILY_API_KEY` server secret.
+- Tavily searches public web pages; it does not grant direct logged-in access to private LinkedIn, Instagram, Facebook or other restricted accounts.
+- Personal WhatsApp remains a manual, approval-based workflow. WEDNESDAY prepares a draft and opens WhatsApp; the user reviews and sends it.
+
+## Local preview
+For a simple local preview, run:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000`.
+Open `http://localhost:8000`.
 
-## Deploy to GitHub Pages
-1. Create a new GitHub repository.
-2. Upload the contents of this folder to the repository root.
-3. In repository Settings → Pages, choose Deploy from a branch and select `main` / root.
-4. Open the published Pages URL.
+## Security
+- Never put a Supabase service-role key, AI provider secret, Tavily secret or WhatsApp token in frontend JavaScript.
+- Keep Supabase Edge Function JWT verification enabled.
+- Do not enable public signups for a private owner-only workspace.
+- Review lead details before contacting a business.
+- External actions such as sending messages, payments and deletion should require explicit approval.
 
-## Supabase next step
-1. Create a Supabase project.
-2. Open SQL Editor and run `supabase-schema.sql`.
-3. Use the Project URL and public publishable/anon key in the Settings page.
-4. The next implementation step will add the Supabase client, authentication and live connection test.
-
-Never use a Supabase `service_role` key in browser code. Never put AI provider secrets, WhatsApp tokens, or Gmail client secrets in GitHub Pages.
-
-## Current status
-This is a functional front-end foundation, not yet a connected AI assistant. No email, WhatsApp, calendar, calling, or AI account is connected. The chat preview does not send your messages anywhere. Those integrations require secure backend functions and explicit account authorisation.
-
-## WhatsApp
-The official WhatsApp Business Platform requires a WhatsApp Business Account and supported setup. Personal WhatsApp does not have equivalent general-purpose API access. WEDNESDAY will keep these as separate integration paths and will not use unofficial QR/session scraping.
-
-## Planned implementation order
-1. Supabase authentication + live database connection test
-2. Secure AI backend + conversational memory
-3. Client CRM persistence and task/reminder persistence
-4. Gmail OAuth integration
-5. WhatsApp Business Cloud API integration
-6. Personal WhatsApp supported options assessment
-7. Calendar, voice, Android and iOS native integrations
+## Deployment
+The frontend is published with GitHub Pages from the repository root. Supabase provides authentication and server-side lead discovery. Dashboard Studio currently stores dashboard definitions locally in the browser; cloud sync and multi-user access are future work.
