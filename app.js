@@ -528,27 +528,33 @@ function initializeChat() {
     const replyBubble = addChatMessage("Thinking...", "assistant");
 
     try {
-      let firstToken = true;
+      let answer = "";
+      const toolResult = await window.WEDNESDAY_CHAT_TOOLS?.run(message, controller.signal);
 
-      const answer = await askWednesday(
-        message,
-        fullText => {
-          if (requestId !== activeRequestId) return;
+      if (toolResult?.handled) {
+        answer = toolResult.answer || "I completed the requested research step.";
+        if (replyBubble) replyBubble.textContent = answer;
+      } else {
+        let firstToken = true;
+        answer = await askWednesday(
+          message,
+          fullText => {
+            if (requestId !== activeRequestId) return;
 
-          if (firstToken && replyBubble) {
-            replyBubble.textContent = "";
-            firstToken = false;
-          }
+            if (firstToken && replyBubble) {
+              replyBubble.textContent = "";
+              firstToken = false;
+            }
 
-          if (replyBubble) {
-            replyBubble.textContent = fullText;
-
-            const body = $("chat-body");
-            if (body) body.scrollTop = body.scrollHeight;
-          }
-        },
-        controller.signal
-      );
+            if (replyBubble) {
+              replyBubble.textContent = fullText;
+              const body = $("chat-body");
+              if (body) body.scrollTop = body.scrollHeight;
+            }
+          },
+          controller.signal
+        );
+      }
 
       if (requestId !== activeRequestId) return;
 
