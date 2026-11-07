@@ -211,10 +211,11 @@ serve(async (request) => {
     const leads: Array<Record<string, unknown>> = [];
 
     for (const item of (data.results || [])) {
-      const title = cleanName(String(item.title || ""));
+      const rawTitle = String(item.title || "");
       const url = String(item.url || "");
-      const content = String(item.content || "");
-      if (!title || !url || !/^https?:\/\//i.test(url)) continue;
+      const content = String(item.raw_content || item.content || "");
+      if (!rawTitle || !url || !/^https?:\/\//i.test(url)) continue;
+      const title = cleanName(rawTitle, content, url);
 
       const key = title.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (!key || seen.has(key)) continue;
