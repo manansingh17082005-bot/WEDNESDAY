@@ -590,6 +590,11 @@
           <article class="bh-kpi"><span>RECORDED EXPENSES</span><strong id="bh-expenses">₹0</strong></article>
           <article class="bh-kpi"><span>ACTIVE OPPORTUNITIES</span><strong id="bh-active">0</strong></article>
         </div>
+        <div class="panel">
+          <div class="panel-head"><div><span class="eyebrow">YOUR MOMENTUM</span><h3>Business activity & progress</h3><p class="muted">WEDNESDAY tracks the work you do inside this workspace and recommends your next move.</p></div></div>
+          <div id="bh-activity-summary" class="bh-activity-grid"></div>
+          <p id="bh-activity-next" class="note">Your next recommended action will appear here.</p>
+        </div>
         <div class="panel"><div class="panel-head"><div><span class="eyebrow">BUSINESS SETTINGS</span><h3>Sales preferences</h3></div></div>
           <form id="bh-profile-form" class="bh-form">
             <label>Business model<select id="bh-profile-model"><option value="both">Freelance + agency</option><option value="freelance">Freelance only</option><option value="agency">Agency only</option></select></label>
@@ -634,6 +639,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./app.js"></script>
+  <script src="./chat-tools.js"></script>
+  <script src="./activity-tracker.js"></script>
   <script src="./business-cloud-sync.js"></script>
   <script src="./business-hub.js"></script>
   <script src="./dashboard-studio.js"></script>
