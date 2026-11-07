@@ -816,7 +816,7 @@ async function prepareLeadOutreach(index) {
       "\nResearch priority score: " + getLeadResearchPriority(lead) + "/100 (heuristic, not proof of buying intent).";
   }
   if ($("outreach-channel")) {
-    $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber ? "WhatsApp" : "Instagram DM");
+    $("outreach-channel").value = lead.email ? "Email" : (lead.whatsappNumber || lead.phone ? "WhatsApp" : "Instagram DM");
   }
   showPage("outreach");
   const button = $("outreach-generate-btn");
