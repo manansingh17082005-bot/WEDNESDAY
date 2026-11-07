@@ -116,7 +116,8 @@
       if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
         if (v.includes("report") || v.includes("dashboard") || v.includes("mis")) normalised.push("Excel Reporting & Dashboards");
         normalised.push("Excel / Data Entry");
-      } else if (v.includes("google sheet")) normalised.push("Google Sheets Automation");
+      }
+      if (v.includes("google sheet")) normalised.push("Google Sheets Automation");
       else if (v.includes("video") || v.includes("reel")) normalised.push("Video Editing");
       else if (v.includes("website") || v.includes("web development")) normalised.push("Website Development");
       else if (v.includes("social") || v.includes("instagram")) normalised.push("Social Media Management");
