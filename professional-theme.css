@@ -1,0 +1,39 @@
+/* WEDNESDAY — Professional workspace theme */
+:root{--bg:#0b1220;--panel:#111c2e;--panel2:#17243a;--line:#26364d;--text:#e8eef7;--muted:#91a0b5;--purple:#8ba8ff;--blue:#65a9e8;--green:#57c59a;--amber:#e4b86a;--danger:#e47c83}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+.app-shell{grid-template-columns:258px minmax(0,1fr)}
+.sidebar{background:#0d1727;border-right:1px solid #24334a;padding:25px 17px}
+.brand{padding-bottom:24px}.brand-mark{border-radius:11px;background:#294b79;box-shadow:none;color:#fff}
+.brand strong{color:#f3f6fb;letter-spacing:.08em}.brand small,.profile small{color:#91a0b5}
+.profile{background:#121f32;border:1px solid #26364d;border-radius:12px;padding:12px}
+.avatar{background:#243a59;color:#dce9ff;border-radius:10px}
+.nav-item{border-radius:9px;color:#a8b5c8;font-weight:600;padding:11px 12px}.nav-item span{color:#8298bb}
+.nav-item:hover,.nav-item.active{background:#1b2d47;color:#f3f7ff;box-shadow:inset 2px 0 #7fa8e8}
+.safe-card{background:#132a2a;border:1px solid #245044;border-radius:11px;color:#a9e2cb}.safe-card small{color:#9ab9ae}.version{color:#6f819a}
+.main{max-width:1760px;padding:30px 34px}.topbar{border-bottom:1px solid #1e2b40;padding-bottom:20px;margin-bottom:25px}
+.topbar h1{color:#f2f5fa;font-size:25px}.eyebrow{color:#8fa9cf;letter-spacing:.13em}.section-heading h2{color:#f1f5fb;font-size:22px}
+.panel,.stat-card,.integration-card,.wa-reply-panel,.config-panel{background:#111c2e;border:1px solid #26364d;border-radius:13px;box-shadow:none}.panel{padding:21px}.stat-card{padding:19px}
+.stat-card>span{color:#92a2b8;letter-spacing:.1em}.stat-card strong{color:#f4f7fc}.stat-icon{border-radius:10px}
+.welcome-panel{background:linear-gradient(115deg,#172b46,#1b3655 65%,#213e5c);border:1px solid #345071;border-radius:15px;box-shadow:none;min-height:220px}
+.welcome-panel h2{font-size:clamp(26px,3vw,37px);line-height:1.16}.welcome-panel p{color:#c0cede}.welcome-panel .eyebrow{color:#a9c3e7}
+.orb{background:radial-gradient(circle,#dceaff 0 18%,#7195c9 19% 48%,#2b4c78 49% 70%,#1b2e4a 71%);box-shadow:0 0 0 9px #ffffff0c}.orb-core{background:#e6efff;color:#28466d;border-radius:12px}
+.primary-btn{background:#426fa8;border:1px solid #5b86bd;border-radius:9px;box-shadow:none;color:white;font-weight:700}.primary-btn:hover{background:#507fb9;transform:translateY(-1px)}
+.secondary-btn,.icon-btn{background:#17253a;border:1px solid #34465f;color:#d2dceb;border-radius:9px;box-shadow:none}
+.sync-pill{background:#132b2a;border:1px solid #285347;color:#a8dfc7}
+.chat-panel{background:#101b2c;border:1px solid #2b3b53;border-radius:14px;overflow:hidden}.assistant-stage{display:block;max-width:1100px;margin:18px auto 0}
+.chat-header{background:#15243a;border-bottom:1px solid #2b3b53;border-radius:0;padding:15px 18px}.orb-mini{background:#29466c;color:#e4efff;border:1px solid #45658d;border-radius:10px}
+.chat-body{min-height:380px;max-height:62vh;padding:22px;background:#0e1929}
+.assistant-bubble{background:#17263c;color:#e1e9f4;border:1px solid #2c405d;border-radius:13px 13px 13px 4px}.user-bubble{background:#24466d;color:#f3f7ff;border-radius:13px 13px 4px 13px}
+.chat-compose{background:#111e31;border-top:1px solid #2b3b53;padding:14px}
+input,select,textarea{background:#0d1828!important;border:1px solid #31445e!important;color:#e8eef7!important;border-radius:9px!important}
+input:focus,select:focus,textarea:focus{border-color:#7099cc!important;box-shadow:0 0 0 3px #7099cc20!important}
+.lead-choice,.lead-source-grid label,.lead-filter-row label{background:#142238;border:1px solid #2c405a;border-radius:11px;color:#dce5f1}
+.lead-choice b{color:#edf3fb}.lead-choice small,.note{color:#91a1b6}.lead-choice input,.lead-source-grid input,.lead-filter-row input{accent-color:#76a3dc}
+.lead-choice:hover{border-color:#7298c6;transform:translateY(-1px)}.lead-results-placeholder{background:#132137;border:1px dashed #3b506e;border-radius:12px}
+.lead-results-placeholder p{color:#9aabc0}.table-wrap{border:1px solid #293b54;border-radius:10px;overflow:auto}table{color:#dce5f1}th{background:#16263c;color:#a8b9d0}td{border-bottom:1px solid #25364d}
+.notice{background:#142238;border:1px solid #30445f;border-radius:11px}.notice p{color:#a8b6c9}.notice a,.lead-table a{color:#9fc2f0}
+.wa-reply-panel input,.wa-reply-panel select,.wa-reply-panel textarea{background:#0d1828;color:#edf3fb;border:1px solid #31445e}
+.wa-reply-panel input:focus,.wa-reply-panel select:focus,.wa-reply-panel textarea:focus{border-color:#7099cc;box-shadow:0 0 0 2px #7099cc20}
+.settings-grid{gap:16px}.config-panel{background:#111c2e}footer{border-top:1px solid #1e2d42;color:#74859d;margin-top:30px;padding-top:20px}
+@media(max-width:1000px){.app-shell{grid-template-columns:220px minmax(0,1fr)}.main{padding:24px}}
+@media(max-width:700px){.app-shell{display:block}.sidebar{padding:13px 14px}.main{padding:19px 14px}.assistant-stage{margin-top:14px}.chat-body{min-height:300px;max-height:58vh}.welcome-panel{padding:22px}.panel{padding:16px}}
