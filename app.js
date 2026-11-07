@@ -171,6 +171,7 @@ window.WEDNESDAY_INTERRUPT = function () {
   if ("speechSynthesis" in window) {
     window.speechSynthesis.cancel();
   }
+  window.WEDNESDAY_SPEAK_STREAM_CANCEL?.();
 
   setWednesdayCharacterState("idle");
 };
