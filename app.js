@@ -532,6 +532,7 @@ function initializeChat() {
 
     try {
       let answer = "";
+      setWednesdayCharacterState("thinking");
       const toolResult = await window.WEDNESDAY_CHAT_TOOLS?.run(message, controller.signal);
 
       if (toolResult?.handled) {
@@ -576,7 +577,7 @@ function initializeChat() {
 
       if (replyBubble) {
         replyBubble.textContent =
-          `I couldn't connect to the local AI. ${error.message}`;
+          `I couldn't complete that request. ${error.message}`;
       }
 
       setWednesdayCharacterState("error");
