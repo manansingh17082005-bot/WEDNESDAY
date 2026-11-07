@@ -726,7 +726,8 @@ function getLeadExcelRows() {
       "Business Name": lead.name || "",
       "Contact Person": lead.contactPerson || "",
       "WhatsApp Number": whatsappNumber ? "+" + whatsappNumber : "",
-      "WhatsApp Status": whatsappNumber ? "Public WhatsApp link found" : "Not found / not verified",
+      "WhatsApp Status": whatsappNumber ? "Public WhatsApp link found" : (lead.phone ? "Public phone available; WhatsApp not verified" : "Not found"),
+      "WhatsApp Check Link": !whatsappNumber && lead.phone ? "https://wa.me/" + String(lead.phone).replace(/\\D/g, "") : (whatsappNumber ? "https://wa.me/" + whatsappNumber : ""),
       "Phone Number": lead.phone || "",
       "Email": lead.email || "",
       "Website": lead.website || "",
@@ -803,7 +804,7 @@ async function prepareLeadOutreach(index) {
     serviceSelect.value = service;
   }
   if ($("outreach-business")) $("outreach-business").value = lead.name || lead.company || "";
-  if ($("outreach-phone")) $("outreach-phone").value = lead.whatsappNumber || "";
+  if ($("outreach-phone")) $("outreach-phone").value = lead.whatsappNumber || lead.phone || "";
   if ($("outreach-observation")) {
     $("outreach-observation").value = lead.snippet
       ? "Public listing information to verify: " + lead.snippet
@@ -846,7 +847,7 @@ function renderDiscoveredLeads() {
               <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
               <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>${escapeHTML(lead.priorityTier || "Heuristic research priority")}</small><br><small>${escapeHTML((lead.qualificationReasons || []).join(" · ") || "No strong buying signal found")}</small></td>
               <td>${escapeHTML(lead.phone || "Not found")}</td>
-              <td>${escapeHTML(lead.whatsappNumber ? "+" + lead.whatsappNumber : "Not found / not verified")}</td>
+              <td>${lead.whatsappNumber ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(lead.whatsappNumber) + '" target="_blank" rel="noopener noreferrer">+' + escapeHTML(lead.whatsappNumber) + ' · Open WhatsApp ↗</a><small>Public WhatsApp link found</small>' : (lead.phone ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(String(lead.phone).replace(/\\D/g, "")) + '" target="_blank" rel="noopener noreferrer">Check public phone on WhatsApp ↗</a><small>Not verified as a WhatsApp account</small>' : 'Not found')}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
               <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
@@ -856,7 +857,7 @@ function renderDiscoveredLeads() {
         </tbody>
       </table>
     </div>
-    <p class="note">Search results are leads to review, not verified proof that a business is newly opened or wants your service. Missing phone/email fields are left blank.</p>
+    <p class="note">Business names and contact details are extracted from public search text. A phone number is not automatically a WhatsApp number; use the check link to see whether it is registered. Missing details are left blank.</p>
   `;
 
   $("lead-export-excel")?.addEventListener("click", downloadLeadExcel);
