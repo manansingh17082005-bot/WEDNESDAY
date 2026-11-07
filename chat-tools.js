@@ -57,9 +57,24 @@
     const plan = await extractSearchPlan(message, signal);
     const businessType = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
     const location = String(plan.location || document.getElementById("lead-location")?.value || "").trim();
-    let services = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : [];
-    if (!services.length) services = checkedValues("lead-service");
-    if (!services.length) services = ["Excel and Google Sheets"];
+    const rawServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : checkedValues("lead-service");
+    const normalised = [];
+    rawServices.forEach(value => {
+      const v = value.toLowerCase();
+      if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
+        if (v.includes("report") || v.includes("dashboard") || v.includes("mis")) normalised.push("Excel Reporting & Dashboards");
+        normalised.push("Excel / Data Entry");
+      } else if (v.includes("google sheet")) normalised.push("Google Sheets Automation");
+      else if (v.includes("video") || v.includes("reel")) normalised.push("Video Editing");
+      else if (v.includes("website") || v.includes("web development")) normalised.push("Website Development");
+      else if (v.includes("social") || v.includes("instagram")) normalised.push("Social Media Management");
+      else if (v.includes("analysis") || v.includes("power bi") || v.includes("analytics")) normalised.push("Data Analysis");
+      else if (v.includes("logo") || v.includes("brand")) normalised.push("Logo Design");
+    });
+    const services = [...new Set(normalised)];
+    if (!services.length) {
+      return { handled: true, answer: "Which service should I find clients for: Excel and data work, Google Sheets, video editing, websites, social media, data analysis, or logo design?" };
+    }
 
     if (!businessType || !location) {
       return {
@@ -109,8 +124,9 @@
       const el = document.getElementById(id);
       if (el) el.value = [businessType, location, payload.keywords][i];
     });
-    if (typeof showPage === "function") showPage("lead-generation");
     if (status) status.textContent = "Found " + leads.length + " public result(s). Review the evidence before contacting.";
+    window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
+    if (leads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: leads.length });
 
     const evidence = leads.slice(0, 20).map((lead, index) => ({
       rank: index + 1,
@@ -154,8 +170,31 @@
     };
   }
 
+  function isProgressRequest(message) {
+    return /\b(progress|how am i doing|my activity|my performance|business report|sales progress|what have i done|how many leads|weekly report)\b/i.test(message);
+  }
+  function progressReport() {
+    const s = window.WEDNESDAY_ACTIVITY?.summary?.();
+    if (!s) return "I haven't started tracking business activity yet. Ask me to research prospects, review leads and prepare outreach, and I'll report your progress here.";
+    const next = s.leadsFound === 0 ? "Start by asking me to find prospects for one service in a specific city." : s.leadsReviewed === 0 ? "Review the leads I found and choose the strongest matches." : s.drafts === 0 ? "Prepare a personalised first-contact draft." : s.contacted === 0 ? "Review a draft and contact one suitable prospect yourself." : "Update your pipeline, record replies and schedule follow-ups.";
+    return [
+      "Your WEDNESDAY business progress so far:",
+      "Chat interactions: " + s.chatMessages,
+      "Live searches: " + s.searches,
+      "Public leads discovered: " + s.leadsFound,
+      "Leads reviewed: " + s.leadsReviewed,
+      "CRM records added: " + s.crmAdded,
+      "Outreach drafts prepared: " + s.drafts,
+      "Prospects marked contacted: " + s.contacted,
+      "",
+      "My recommendation: " + next,
+      "",
+      "I only count activity recorded inside WEDNESDAY. These numbers do not mean a client has been won."
+    ].join("\n");
+  }
   window.WEDNESDAY_CHAT_TOOLS = {
     async run(message, signal) {
+      if (isProgressRequest(message)) return { handled: true, answer: progressReport() };
       if (!isLeadResearchRequest(message)) return { handled: false };
       return runLeadSearch(message, signal);
     }
