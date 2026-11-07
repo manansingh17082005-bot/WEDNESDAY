@@ -21,15 +21,27 @@ const json = (body: unknown, status = 200, origin: string | null = null) =>
     headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 
+function isIndiaLocation(location: string): boolean {
+  return /\bindia\b|noida|greater noida|delhi|gurugram|gurgaon|ghaziabad|faridabad|meerut|lucknow|kanpur|jaipur|mumbai|pune|bengaluru|bangalore|hyderabad|chennai|kolkata|ahmedabad|surat|agra|chandigarh/i.test(location);
+}
+
 function extractPublicPhone(text: string, location: string): string {
-  const international = text.match(/(?:\+|00)\s*(\d[\d\s().-]{6,18}\d)/);
+  const cleaned = text.replace(/&nbsp;|&#160;/gi, " ");
+  const india = cleaned.match(/(?:\+91|0091|91[\s().-]?)([6-9]\d{9})(?!\d)/);
+  if (india) return `+91 ${india[1]}`;
+  if (isIndiaLocation(location)) {
+    const local = cleaned.match(/(?:^|\D)([6-9]\d{9})(?!\d)/);
+    if (local) return `+91 ${local[1]}`;
+  }
+  const labelled = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel)\s*(?:number)?\s*[:：-]?\s*(\+?\d[\d\s().-]{7,18}\d)/i);
+  if (labelled) {
+    const digits = labelled[1].replace(/\D/g, "");
+    if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+  }
+  const international = cleaned.match(/(?:\+|00)\s*(\d[\d\s().-]{7,17}\d)/);
   if (international) {
     const digits = international[1].replace(/\D/g, "");
     if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
-  }
-  if (/\bindia\b/i.test(location)) {
-    const local = text.match(/(?:^|\D)([6-9]\d{9})(?!\d)/);
-    if (local) return `+91 ${local[1]}`;
   }
   return "";
 }
@@ -40,14 +52,38 @@ function extractPublicEmail(text: string): string {
 
 function extractPublicWhatsApp(text: string): string {
   const patterns = [
-    /(?:https?:\/\/)?(?:api\.)?wa\.me\/(?:send\/)?([0-9]{10,15})/i,
-    /api\.whatsapp\.com\/send\?[^\s"'<>]*phone=([0-9]{10,15})/i
+    /(?:https?:\/\/)?(?:api\.)?wa\.me\/(?:send\/)?([0-9]{8,15})/i,
+    /api\.whatsapp\.com\/send\?[^\s"'<>]*phone=([0-9]{8,15})/i,
+    /whatsapp[^\n]{0,100}?(?:phone|number|tel)[^0-9]{0,12}(\+?[0-9][0-9\s().-]{7,17}[0-9])/i
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) return match[1];
+    if (match) {
+      const digits = match[1].replace(/\D/g, "");
+      if (digits.length >= 8 && digits.length <= 15) return digits;
+    }
   }
   return "";
+}
+
+function cleanName(title: string, content = "", url = ""): string {
+  const generic = /^(home|homepage|contact us|contact|about us|about|official website|welcome|login|sign in|menu|services|search results?)$/i;
+  const candidates = [
+    title.split("|")[0].trim(),
+    title.replace(/^\s*(?:home|homepage|contact us|about us)\s*[-–—:]\s*/i, "").trim(),
+    content.match(/(?:business|company|organisation|organization|brand)\s*name\s*[:：-]\s*([^\n|]{2,100})/i)?.[1]?.trim() || ""
+  ];
+  for (const candidate of candidates) {
+    const cleaned = candidate.replace(/\s*[-–—:]\s*(?:official website|home|contact us|about us|welcome).*$/i, "").replace(/\s*\([^)]*\)\s*$/, "").trim().slice(0, 120);
+    if (cleaned && !generic.test(cleaned) && cleaned.length > 2) return cleaned;
+  }
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").split(".")[0];
+    if (host && !/^(google|facebook|instagram|linkedin|justdial|youtube|wikipedia)$/i.test(host)) {
+      return host.replace(/[-_]+/g, " ").replace(/\b\w/g, x => x.toUpperCase()).slice(0, 120);
+    }
+  } catch (_) {}
+  return "Business name not verified";
 }
 
 
@@ -138,7 +174,7 @@ serve(async (request) => {
       prioritiseNoWebsite ? "small business website missing no official website" : "",
       prioritiseWeakSocial ? "business social media page inactive irregular posting low engagement" : "",
       prioritisePublicContact ? "public business phone email contact details" : "business official contact website",
-      "business contact phone address official website"
+      "business official name company name contact us phone number telephone mobile number WhatsApp wa.me official website"
     ].filter(Boolean).join(" ");
 
     // One basic-search request costs one Tavily credit.
@@ -154,7 +190,7 @@ serve(async (request) => {
         search_depth: "basic",
         max_results: Math.min(20, Math.max(5, limit)),
         include_answer: false,
-        include_raw_content: false,
+        include_raw_content: true,
       }),
     });
 
@@ -198,12 +234,13 @@ serve(async (request) => {
         company: title,
         phone,
         whatsappNumber,
-        whatsappStatus: whatsappNumber ? "Public WhatsApp link found" : "Not found / not verified",
+        whatsappLink: whatsappNumber ? `https://wa.me/${whatsappNumber}` : "",
+        whatsappStatus: whatsappNumber ? "Public WhatsApp link found" : phone ? "Public phone found; WhatsApp not verified" : "Not found / not verified",
         email,
         address: "",
         website: url,
         source: host ? `Tavily · ${host}` : "Tavily Web Search",
-        snippet: content.slice(0, 700),
+        snippet: content.slice(0, 1200),
         searchQuery: query,
         status: "Needs review",
         contactVerified: Boolean(phone || email),
