@@ -193,8 +193,10 @@ async function askWednesday(message, onText = () => {}, signal) {
         ...conversationHistory
       ],
       stream: true,
+      keep_alive: "10m",
       options: {
-        temperature: 0.6
+        temperature: 0.5,
+        num_predict: 384
       }
     })
   });
@@ -524,6 +526,7 @@ function initializeChat() {
       content: message
     });
     persistConversationHistory();
+    window.WEDNESDAY_ACTIVITY?.log?.("chat_message");
 
     const replyBubble = addChatMessage("Thinking...", "assistant");
 
@@ -536,24 +539,19 @@ function initializeChat() {
         if (replyBubble) replyBubble.textContent = answer;
       } else {
         let firstToken = true;
-        answer = await askWednesday(
-          message,
-          fullText => {
-            if (requestId !== activeRequestId) return;
-
-            if (firstToken && replyBubble) {
-              replyBubble.textContent = "";
-              firstToken = false;
-            }
-
-            if (replyBubble) {
-              replyBubble.textContent = fullText;
-              const body = $("chat-body");
-              if (body) body.scrollTop = body.scrollHeight;
-            }
-          },
-          controller.signal
-        );
+        const canStreamSpeech = typeof window.WEDNESDAY_SPEAK_STREAM_START === "function";
+        if (canStreamSpeech) window.WEDNESDAY_SPEAK_STREAM_START();
+        answer = await askWednesday(message, fullText => {
+          if (requestId !== activeRequestId) return;
+          if (firstToken && replyBubble) { replyBubble.textContent = ""; firstToken = false; }
+          if (replyBubble) {
+            replyBubble.textContent = fullText;
+            const body = $("chat-body");
+            if (body) body.scrollTop = body.scrollHeight;
+          }
+          window.WEDNESDAY_SPEAK_STREAM_PUSH?.(fullText);
+        }, controller.signal);
+        if (canStreamSpeech) window.WEDNESDAY_SPEAK_STREAM_END();
       }
 
       if (requestId !== activeRequestId) return;
@@ -566,11 +564,12 @@ function initializeChat() {
 
       if (typeof window.WEDNESDAY_SPEAK === "function") {
         setWednesdayCharacterState("speaking");
-        window.WEDNESDAY_SPEAK(answer);
+        if (toolResult?.handled || typeof window.WEDNESDAY_SPEAK_STREAM_START !== "function") window.WEDNESDAY_SPEAK(answer);
       } else {
         setWednesdayCharacterState("idle");
       }
     } catch (error) {
+      window.WEDNESDAY_SPEAK_STREAM_CANCEL?.();
       if (error.name === "AbortError") return;
 
       console.error("Assistant error:", error);
@@ -670,6 +669,7 @@ function initializeClients() {
     });
 
     saveData(STORAGE_KEYS.clients, clients);
+    window.WEDNESDAY_ACTIVITY?.log?.("crm_added");
     window.WEDNESDAY_CLOUD_SYNC?.syncClients(clients).catch(error => console.warn('CRM cloud sync:', error.message));
     form.reset();
     renderClients();
@@ -779,6 +779,7 @@ function getLeadResearchPriority(lead) {
 async function prepareLeadOutreach(index) {
   const lead = discoveredLeads[index];
   if (!lead) return;
+  window.WEDNESDAY_ACTIVITY?.log?.("lead_reviewed");
   const services = getCheckedValues("lead-service");
   const service = services[0] || "Social Media Management";
   const serviceSelect = $("outreach-service");
@@ -887,6 +888,7 @@ function renderDiscoveredLeads() {
     });
 
     saveData(STORAGE_KEYS.clients, clients);
+    if (added) window.WEDNESDAY_ACTIVITY?.log?.("crm_added", { count: added });
     renderClients();
     renderDiscoveredLeads();
     showStatus("lead-search-status", `${added} new lead(s) added to Client CRM. Duplicates were skipped.`);
@@ -958,6 +960,8 @@ function initializeLeadGeneration() {
         if (data?.error) throw new Error(data.error);
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
+        window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
+        if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();
         showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Preparing your Excel report…`);
         if (discoveredLeads.length && window.XLSX) {
@@ -1064,6 +1068,7 @@ Requirements:
 
       try {
         const draft = await askWednesdayOnce(prompt);
+        window.WEDNESDAY_ACTIVITY?.log?.("outreach_draft");
 
         const output = $("outreach-draft");
         if (output) output.value = draft;
