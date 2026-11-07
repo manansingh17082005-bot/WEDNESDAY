@@ -125,7 +125,8 @@
     streamActive = false; streamEnded = false; speechQueue = []; streamBuffer = ""; streamCursor = 0;
     processing = false; speaking = false;
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    setState("idle"); if (enabled) scheduleRestart(500);
+    stopRecognition();
+    setState("idle");
   }
   function speak(text) {
     if (!("speechSynthesis" in window) || !text) { processing = false; scheduleRestart(); return; }
