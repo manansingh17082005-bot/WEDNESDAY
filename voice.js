@@ -50,44 +50,92 @@
     }, delay);
   }
 
-  function speak(text) {
-    if (!("speechSynthesis" in window) || !text) {
-      processing = false;
-      scheduleRestart();
+  let speechQueue = [];
+  let streamBuffer = "";
+  let streamCursor = 0;
+  let streamActive = false;
+  let streamEnded = false;
+  function cleanForSpeech(value) {
+    return String(value || "")
+      .replace(/\x60{3}[\s\S]*?\x60{3}/g, " ")
+      .replace(/\x60([^\x60]+)\x60/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+      .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/^\s*\d+[.)]\s+/gm, "")
+      .replace(/\*\*|__|~~|\*|_/g, "")
+      .replace(/[{}[\]|<>\x60]/g, " ")
+      .replace(/[=~^]/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+  function finishSpeechQueue() {
+    speaking = false; processing = false; streamActive = false; streamEnded = false;
+    streamBuffer = ""; streamCursor = 0; setState("idle");
+    if (enabled) scheduleRestart(900);
+  }
+  function pumpSpeechQueue() {
+    if (speaking || !speechQueue.length) {
+      if (!speaking && streamEnded && !speechQueue.length) finishSpeechQueue();
       return;
     }
-    const clean = String(text)
-      .replace(/\*{1,3}|#{1,6}\s?/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .slice(0, 5000);
-    if (!clean.trim()) { processing = false; scheduleRestart(); return; }
-
-    window.speechSynthesis.cancel();
-    processing = false;
+    const text = cleanForSpeech(speechQueue.shift());
+    if (!text) { pumpSpeechQueue(); return; }
     speaking = true;
-    stopRecognition();
-
-    const utterance = new SpeechSynthesisUtterance(clean);
+    const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => /^en-IN$/i.test(v.lang)) ||
-      voices.find(v => /^en-GB$/i.test(v.lang)) ||
-      voices.find(v => /^en-US$/i.test(v.lang)) ||
-      voices.find(v => /^en/i.test(v.lang));
+    const preferred = voices.find(v => /^en-IN$/i.test(v.lang)) || voices.find(v => /^en-GB$/i.test(v.lang)) || voices.find(v => /^en-US$/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
     if (preferred) utterance.voice = preferred;
-    utterance.rate = 1.02;
-    utterance.pitch = 1.08;
-    utterance.volume = 1;
+    utterance.rate = 1.08; utterance.pitch = 1.05; utterance.volume = 1;
     utterance.onstart = () => setState("speaking");
     const finish = () => {
       speaking = false;
-      setState("idle");
-      if (enabled) scheduleRestart(1000);
+      if (speechQueue.length) pumpSpeechQueue();
+      else if (streamEnded || !streamActive) finishSpeechQueue();
     };
-    utterance.onend = finish;
-    utterance.onerror = finish;
+    utterance.onend = finish; utterance.onerror = finish;
     window.speechSynthesis.speak(utterance);
   }
+  function startSpeechStream() {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel(); speechQueue = []; streamBuffer = ""; streamCursor = 0;
+    streamActive = true; streamEnded = false; processing = true; speaking = false; stopRecognition();
+  }
+  function pushSpeechStream(fullText) {
+    if (!streamActive || !("speechSynthesis" in window)) return;
+    const text = String(fullText || "");
+    if (text.length < streamCursor) streamCursor = 0;
+    streamBuffer += text.slice(streamCursor); streamCursor = text.length;
+    const sentencePattern = /[\s\S]*?[.!?](?=\s|$)/g;
+    let match, consumed = 0;
+    while ((match = sentencePattern.exec(streamBuffer)) !== null) {
+      const sentence = match[0].trim(); if (sentence) speechQueue.push(sentence);
+      consumed = sentencePattern.lastIndex;
+    }
+    if (consumed) streamBuffer = streamBuffer.slice(consumed);
+    if (speechQueue.length) pumpSpeechQueue();
+  }
+  function endSpeechStream() {
+    if (!streamActive) return;
+    if (streamBuffer.trim()) speechQueue.push(streamBuffer.trim());
+    streamBuffer = ""; streamEnded = true; pumpSpeechQueue();
+  }
+  function cancelSpeechStream() {
+    streamActive = false; streamEnded = false; speechQueue = []; streamBuffer = ""; streamCursor = 0;
+    processing = false; speaking = false;
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    setState("idle"); if (enabled) scheduleRestart(500);
+  }
+  function speak(text) {
+    if (!("speechSynthesis" in window) || !text) { processing = false; scheduleRestart(); return; }
+    startSpeechStream(); pushSpeechStream(String(text).slice(0, 5000)); endSpeechStream();
+  }
   window.WEDNESDAY_SPEAK = speak;
+  window.WEDNESDAY_SPEAK_STREAM_START = startSpeechStream;
+  window.WEDNESDAY_SPEAK_STREAM_PUSH = pushSpeechStream;
+  window.WEDNESDAY_SPEAK_STREAM_END = endSpeechStream;
+  window.WEDNESDAY_SPEAK_STREAM_CANCEL = cancelSpeechStream;
 
   function submitCommand(text) {
     const input = $("chat-input"), form = $("chat-form");
