@@ -12,7 +12,7 @@
   }
 
   function isLeadResearchRequest(message) {
-    return /\b(find|search|research|look\s+for|discover|identify|get\s+me)\b[\s\S]{0,100}\b(clients?|leads?|prospects?|businesses?)\b|\b(clients?|leads?|prospects?)\b[\s\S]{0,100}\b(find|search|research|look\s+for|discover)\b/i.test(message);
+    return /\b(find|search|research|look\s+for|discover|identify|get\s+me)\b[\s\S]{0,100}\b(clients?|leads?|prospects?|businesses?|companies|firms?)\b|\b(clients?|leads?|prospects?)\b[\s\S]{0,100}\b(find|search|research|look\s+for|discover)\b/i.test(message);
   }
 
   async function extractSearchPlan(message, signal) {
@@ -42,7 +42,59 @@
     return plan;
   }
 
-  async function runLeadSearch(message, signal) {
+  async function streamOllama(prompt, signal, onText) {
+    const response = await fetch(OLLAMA_CHAT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        model: OLLAMA_MODEL_NAME,
+        stream: true,
+        keep_alive: "10m",
+        options: { temperature: 0.3, num_predict: 420 },
+        messages: [
+          { role: "system", content: "You are WEDNESDAY, a careful business research analyst. Never invent details. Be concise and practical." },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+    if (!response.ok) throw new Error("Local AI analysis failed (HTTP " + response.status + ").");
+    if (!response.body) throw new Error("Local AI returned no analysis stream.");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullText = "";
+    try {
+      while (true) {
+        if (signal?.aborted) throw new DOMException("Request stopped", "AbortError");
+        const part = await reader.read();
+        if (part.done) break;
+        buffer += decoder.decode(part.value, { stream: true });
+        const rows = buffer.split("\n");
+        buffer = rows.pop() || "";
+        for (const row of rows) {
+          if (!row.trim()) continue;
+          const data = JSON.parse(row);
+          if (data.error) throw new Error(data.error);
+          const token = data.message?.content || "";
+          if (token) { fullText += token; onText?.(fullText); }
+        }
+      }
+      buffer += decoder.decode();
+      if (buffer.trim()) {
+        const data = JSON.parse(buffer);
+        if (data.error) throw new Error(data.error);
+        const token = data.message?.content || "";
+        if (token) { fullText += token; onText?.(fullText); }
+      }
+      if (!fullText.trim()) throw new Error("WEDNESDAY received an empty analysis.");
+      return fullText;
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  async function runLeadSearch(message, signal, onText) {
     if (!window.WEDNESDAY_SUPABASE_CLIENT) {
       return { handled: true, answer: "I can reason locally, but live client research is not connected yet. Open Settings and connect the Supabase project URL and public anon/publishable key, then sign in. Never put a service-role key in the website." };
     }
@@ -150,20 +202,7 @@
       "Do not claim a business wants to hire. A priority score is not hiring probability. Do not invent facts or contacts. State clearly if no strong buying signal was found. Tell the user results are displayed in the Lead Generation page. Do not add leads to CRM or send messages."
     ].join("\n\n");
 
-    const reasoningResponse = await fetch(OLLAMA_CHAT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal,
-      body: JSON.stringify({
-        model: OLLAMA_MODEL_NAME,
-        stream: false,
-        options: { temperature: 0.3 },
-        messages: [{ role: "system", content: "You are WEDNESDAY, a careful business research analyst. Never invent details." }, { role: "user", content: analysisPrompt }]
-      })
-    });
-    if (!reasoningResponse.ok) throw new Error("Search completed, but local AI analysis failed (HTTP " + reasoningResponse.status + "). Your results are visible in Lead Generation.");
-    const reasoningData = await reasoningResponse.json();
-    const analysis = reasoningData.message?.content?.trim() || "Search completed. Review the results on the Lead Generation page.";
+    const analysis = await streamOllama(analysisPrompt, signal, onText);
     return {
       handled: true,
       answer: analysis + "\n\nI have not saved these prospects to your CRM or contacted anyone. You can review them in Lead Generation and choose which ones to save."
@@ -193,10 +232,14 @@
     ].join("\n");
   }
   window.WEDNESDAY_CHAT_TOOLS = {
-    async run(message, signal) {
-      if (isProgressRequest(message)) return { handled: true, answer: progressReport() };
+    async run(message, signal, onText) {
+      if (isProgressRequest(message)) {
+        const answer = progressReport();
+        onText?.(answer);
+        return { handled: true, answer };
+      }
       if (!isLeadResearchRequest(message)) return { handled: false };
-      return runLeadSearch(message, signal);
+      return runLeadSearch(message, signal, onText);
     }
   };
 })();
