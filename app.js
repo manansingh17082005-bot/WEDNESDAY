@@ -532,12 +532,26 @@ function initializeChat() {
 
     try {
       let answer = "";
+      let toolSpeechStarted = false;
+      let toolFirstToken = true;
       setWednesdayCharacterState("thinking");
-      const toolResult = await window.WEDNESDAY_CHAT_TOOLS?.run(message, controller.signal);
+      const toolResult = await window.WEDNESDAY_CHAT_TOOLS?.run(message, controller.signal, fullText => {
+        if (requestId !== activeRequestId) return;
+        if (toolFirstToken) {
+          if (typeof window.WEDNESDAY_SPEAK_STREAM_START === "function") {
+            window.WEDNESDAY_SPEAK_STREAM_START();
+            toolSpeechStarted = true;
+          }
+          toolFirstToken = false;
+        }
+        if (replyBubble) replyBubble.textContent = fullText;
+        window.WEDNESDAY_SPEAK_STREAM_PUSH?.(fullText);
+      });
 
       if (toolResult?.handled) {
         answer = toolResult.answer || "I completed the requested research step.";
         if (replyBubble) replyBubble.textContent = answer;
+        if (toolSpeechStarted) window.WEDNESDAY_SPEAK_STREAM_END?.();
       } else {
         let firstToken = true;
         const canStreamSpeech = typeof window.WEDNESDAY_SPEAK_STREAM_START === "function";
@@ -565,7 +579,7 @@ function initializeChat() {
 
       if (typeof window.WEDNESDAY_SPEAK === "function") {
         setWednesdayCharacterState("speaking");
-        if (toolResult?.handled || typeof window.WEDNESDAY_SPEAK_STREAM_START !== "function") window.WEDNESDAY_SPEAK(answer);
+        if ((toolResult?.handled && !toolSpeechStarted) || typeof window.WEDNESDAY_SPEAK_STREAM_START !== "function") window.WEDNESDAY_SPEAK(answer);
       } else {
         setWednesdayCharacterState("idle");
       }
