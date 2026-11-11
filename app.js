@@ -953,17 +953,25 @@ function initializeLeadGeneration() {
 
       const services = getCheckedValues("lead-service");
       const sources = getCheckedValues("lead-source");
-      const businessType = $("lead-business-type")?.value.trim();
+      const businessTypeInput = $("lead-business-type")?.value.trim();
       const location = $("lead-location")?.value.trim();
       const keywords = $("lead-keywords")?.value.trim();
       const market = $("lead-market")?.value || "both";
       const businessModel = $("lead-business-model")?.value || "both";
       const limit = Number($("lead-limit")?.value || 25);
 
-      if (!services.length || !businessType || !location) {
-        showStatus("lead-search-status", "Choose a service and enter a business type and location.", true);
+      if (!services.length || !location) {
+        showStatus("lead-search-status", "Choose a service and enter the area to search. Business type can be left blank for a suggested audience.", true);
         return;
       }
+      const businessType = businessTypeInput || (services.length === 1 && services[0] === "Cafe & Restaurant Marketing"
+        ? "cafes and restaurants"
+        : services.length === 1 && services[0] === "CINE AI 2D Animation"
+          ? "small businesses and local brands needing animated promotions"
+          : services.length > 1 && services.includes("Cafe & Restaurant Marketing")
+            ? "small businesses, cafes and restaurants"
+            : "small businesses and startups");
+      if ($("lead-business-type") && !businessTypeInput) $("lead-business-type").value = businessType;
 
       if (!supabaseClient || !supabaseAuthReady) {
         showStatus("lead-search-status", "Live lead search needs your WEDNESDAY account connected. Sign in first, then configure the search provider as described in setup.", true);
