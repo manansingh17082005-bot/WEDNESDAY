@@ -176,6 +176,7 @@
       discoveredLeads = leads;
       if (typeof renderDiscoveredLeads === "function") renderDiscoveredLeads();
     }
+    window.WEDNESDAY_REMEMBER_LEAD_AREA?.(location);
     ["lead-business-type", "lead-location", "lead-keywords"].forEach((id, i) => {
       const el = document.getElementById(id);
       if (el) el.value = [businessType, location, payload.keywords][i];
