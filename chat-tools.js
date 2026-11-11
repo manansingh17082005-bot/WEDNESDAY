@@ -107,7 +107,7 @@
     }
 
     const plan = await extractSearchPlan(message, signal);
-    const businessType = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
+    const businessTypeInput = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
     const location = String(plan.location || document.getElementById("lead-location")?.value || "").trim();
     const extractedServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : [];
     const rawServices = extractedServices.length ? extractedServices : checkedValues("lead-service");
@@ -128,14 +128,21 @@
       else if (v.includes("logo") || v.includes("brand")) normalised.push("Logo Design");
     });
     const services = [...new Set(normalised.length ? normalised : checkedValues("lead-service"))];
+    const businessType = businessTypeInput || (services.length === 1 && services[0] === "Cafe & Restaurant Marketing"
+      ? "cafes and restaurants"
+      : services.length === 1 && services[0] === "CINE AI 2D Animation"
+        ? "small businesses and local brands needing animated promotions"
+        : services.length > 1 && services.includes("Cafe & Restaurant Marketing")
+          ? "small businesses, cafes and restaurants"
+          : "small businesses and startups");
     if (!services.length) {
       return { handled: true, answer: "Which services should I search for? Choose Excel/data analytics, websites, cafe and restaurant marketing, CINE AI animation, video editing, social media, or logo design in the Lead Generation form." };
     }
 
-    if (!businessType || !location) {
+    if (!location) {
       return {
         handled: true,
-        answer: "I can run that search. Which business type and location should I target? For example: small businesses in Noida."
+        answer: "Which area should I search? Enter any neighborhood, city, state or country in the Lead Generation location box. The business type can stay blank and I’ll suggest an audience from your selected service."
       };
     }
 
