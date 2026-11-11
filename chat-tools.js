@@ -213,25 +213,38 @@
   }
 
   function isProgressRequest(message) {
-    return /\b(progress|how am i doing|my activity|my performance|business report|sales progress|what have i done|how many leads|weekly report)\b/i.test(message);
+    return /\b(progress|how am i doing|my activity|my performance|business report|sales progress|what have i done|how many leads|weekly report|daily (?:briefing|update|report)|today(?:'s|s)? (?:briefing|update|report))\b/i.test(message);
   }
   function progressReport() {
-    const s = window.WEDNESDAY_ACTIVITY?.summary?.();
+    const activity = window.WEDNESDAY_ACTIVITY;
+    const s = activity?.summary?.();
     if (!s) return "I haven't started tracking business activity yet. Ask me to research prospects, review leads and prepare outreach, and I'll report your progress here.";
+    const history = activity.history?.() || [];
+    const localDayKey = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    const todayKey = localDayKey(new Date());
+    const todayEvents = history.filter(event => {
+      const date = new Date(event.at);
+      return !Number.isNaN(date.getTime()) && localDayKey(date) === todayKey;
+    });
+    const todayCount = type => todayEvents.filter(event => event.type === type).reduce((sum, event) => sum + (Number(event.count) || 1), 0);
+    const today = {
+      chats: todayCount("chat_message"),
+      searches: todayCount("lead_search"),
+      leads: todayCount("leads_found"),
+      reviewed: todayCount("lead_reviewed"),
+      drafts: todayCount("outreach_draft"),
+      contacted: todayCount("contacted")
+    };
     const next = s.leadsFound === 0 ? "Start by asking me to find prospects for one service in a specific city." : s.leadsReviewed === 0 ? "Review the leads I found and choose the strongest matches." : s.drafts === 0 ? "Prepare a personalised first-contact draft." : s.contacted === 0 ? "Review a draft and contact one suitable prospect yourself." : "Update your pipeline, record replies and schedule follow-ups.";
     return [
-      "Your WEDNESDAY business progress so far:",
-      "Chat interactions: " + s.chatMessages,
-      "Live searches: " + s.searches,
-      "Public leads discovered: " + s.leadsFound,
-      "Leads reviewed: " + s.leadsReviewed,
-      "CRM records added: " + s.crmAdded,
-      "Outreach drafts prepared: " + s.drafts,
-      "Prospects marked contacted: " + s.contacted,
+      "Your WEDNESDAY daily business check-in:",
+      "Today: " + today.chats + " chat interactions, " + today.searches + " searches, " + today.leads + " leads discovered, " + today.reviewed + " reviewed, " + today.drafts + " outreach drafts, " + today.contacted + " marked contacted.",
       "",
-      "My recommendation: " + next,
+      "All-time WEDNESDAY activity: " + s.searches + " searches, " + s.leadsFound + " leads discovered, " + s.leadsReviewed + " reviewed, " + s.crmAdded + " CRM records, " + s.drafts + " drafts, " + s.contacted + " marked contacted.",
       "",
-      "I only count activity recorded inside WEDNESDAY. These numbers do not mean a client has been won."
+      "Recommended next step: " + next,
+      "",
+      "These activity counts are stored in this browser. They do not mean a client has been won or revenue earned."
     ].join("\n");
   }
   window.WEDNESDAY_CHAT_TOOLS = {
