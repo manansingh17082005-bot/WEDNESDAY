@@ -256,6 +256,8 @@
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Excel / Data Entry"><span>▦</span><b>Excel / Data Entry</b><small>Spreadsheets, records and data entry</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Video Editing"><span>▶</span><b>Video Editing</b><small>Reels, shorts and promotional videos</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Website Development"><span>⌘</span><b>Website Development</b><small>Business websites and landing pages</small></label>
+            <label class="lead-choice"><input type="checkbox" name="lead-service" value="Cafe &amp; Restaurant Marketing"><span>☕</span><b>Cafe &amp; Restaurant Marketing</b><small>Promotions, social content and local campaigns</small></label>
+            <label class="lead-choice"><input type="checkbox" name="lead-service" value="CINE AI 2D Animation"><span>▶</span><b>CINE AI 2D Animation</b><small>Flat vector motion graphics and short animated promos</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Social Media Management"><span>◎</span><b>Social Media Management</b><small>Content, posting and account handling</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Data Analysis"><span>▥</span><b>Data Analysis</b><small>Reports, dashboards and insights</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Logo Design"><span>✎</span><b>Logo Design</b><small>Brand identity and creative design</small></label>
@@ -277,7 +279,7 @@
             <label><input type="checkbox" name="lead-source" value="Justdial"> Justdial</label>
           </div>
 
-          <p class="note">Search availability depends on each platform's access rules and available APIs. WEDNESDAY will use permitted search methods and won't bypass logins, CAPTCHAs or platform restrictions.</p>
+          <p class="note">Selected sites guide the public web search; they are not guaranteed direct searches of each platform. Some sites limit indexing. WEDNESDAY won't bypass logins, CAPTCHAs or platform restrictions.</p>
         </div>
 
         <div class="panel">
@@ -290,7 +292,9 @@
               <input id="lead-business-type" type="text" placeholder="Example: Cafes, gyms, real estate agencies">
             </label>
             <label>City / location / country
-              <input id="lead-location" type="text" placeholder="Example: Noida, India or London, UK">
+              <input id="lead-location" type="text" list="lead-location-suggestions" autocomplete="off" placeholder="Type any area, city, state or country" aria-describedby="lead-location-help">
+              <datalist id="lead-location-suggestions"></datalist>
+              <small id="lead-location-help">Enter any area you choose. Recent areas on this device will appear as suggestions.</small>
             </label>
             <label>Target market
               <select id="lead-market"><option value="both" selected>India + international</option><option value="india">India</option><option value="international">International</option></select>
@@ -304,8 +308,7 @@
             <label>Maximum results
               <select id="lead-limit">
                 <option value="10">10 leads</option>
-                <option value="25" selected>25 leads</option>
-                <option value="50">50 leads</option>
+                <option value="20" selected>20 leads</option>
               </select>
             </label>
           </div>
