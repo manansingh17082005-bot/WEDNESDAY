@@ -920,6 +920,28 @@ function renderDiscoveredLeads() {
 function initializeLeadGeneration() {
   const searchButton = $("lead-search-btn");
   const clearButton = $("lead-clear-btn");
+  const locationList = $("lead-location-suggestions");
+  const recentAreasKey = "wednesday_recent_lead_areas";
+  const readRecentAreas = () => {
+    try {
+      const value = JSON.parse(localStorage.getItem(recentAreasKey) || "[]");
+      return Array.isArray(value) ? value.filter(item => typeof item === "string").slice(0, 8) : [];
+    } catch (_) { return []; }
+  };
+  const renderRecentAreas = () => {
+    if (!locationList) return;
+    locationList.innerHTML = readRecentAreas().map(area => '<option value="' + escapeHTML(area) + '"></option>').join("");
+  };
+  const rememberArea = area => {
+    const cleaned = String(area || "").trim();
+    if (!cleaned) return;
+    try {
+      const areas = [cleaned, ...readRecentAreas().filter(item => item.toLowerCase() !== cleaned.toLowerCase())].slice(0, 8);
+      localStorage.setItem(recentAreasKey, JSON.stringify(areas));
+    } catch (_) {}
+    renderRecentAreas();
+  };
+  renderRecentAreas();
 
   if (searchButton) {
     searchButton.addEventListener("click", async () => {
@@ -982,6 +1004,7 @@ function initializeLeadGeneration() {
         if (data?.error) throw new Error(data.error);
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
+        rememberArea(location);
         window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
         if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();
