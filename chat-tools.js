@@ -28,7 +28,7 @@
         messages: [
           {
             role: "system",
-            content: "Extract a business lead-search request as JSON only. Do not invent missing details. Return exactly: {\"businessType\":string,\"location\":string,\"services\":string[],\"keywords\":string,\"limit\":number,\"market\":\"india\"|\"international\"|\"both\",\"businessModel\":\"freelance\"|\"agency\"|\"both\"}. Services should preserve the user's wording, e.g. Excel and Google Sheets, data cleaning, bookkeeping, video editing. If a field is absent, use an empty string or empty array; default limit 25, market both, businessModel both."
+            content: "Extract a business lead-search request as JSON only. Do not invent missing details. Return exactly: {\"businessType\":string,\"location\":string,\"services\":string[],\"keywords\":string,\"limit\":number,\"market\":\"india\"|\"international\"|\"both\"|\"\",\"businessModel\":\"freelance\"|\"agency\"|\"both\"|\"\"}. Services should preserve the user's wording, e.g. Excel, data analytics, CINE AI 2D animation, cafe marketing or website design. For fields absent from the message, return empty string, empty array, or limit 0; do not choose defaults."
           },
           { role: "user", content: message }
         ]
@@ -109,11 +109,14 @@
     const plan = await extractSearchPlan(message, signal);
     const businessType = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
     const location = String(plan.location || document.getElementById("lead-location")?.value || "").trim();
-    const rawServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : checkedValues("lead-service");
+    const extractedServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : [];
+    const rawServices = extractedServices.length ? extractedServices : checkedValues("lead-service");
     const normalised = [];
     rawServices.forEach(value => {
       const v = value.toLowerCase();
-      if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
+      if (v.includes("cine ai") || v.includes("2d animation") || v.includes("motion graphic") || v.includes("vector animation")) normalised.push("CINE AI 2D Animation");
+      else if ((v.includes("cafe") || v.includes("café") || v.includes("restaurant")) && (v.includes("marketing") || v.includes("promotion") || v.includes("social"))) normalised.push("Cafe & Restaurant Marketing");
+      else if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
         if (v.includes("report") || v.includes("dashboard") || v.includes("mis")) normalised.push("Excel Reporting & Dashboards");
         normalised.push("Excel / Data Entry");
       }
@@ -121,12 +124,12 @@
       else if (v.includes("video") || v.includes("reel")) normalised.push("Video Editing");
       else if (v.includes("website") || v.includes("web development")) normalised.push("Website Development");
       else if (v.includes("social") || v.includes("instagram")) normalised.push("Social Media Management");
-      else if (v.includes("analysis") || v.includes("power bi") || v.includes("analytics")) normalised.push("Data Analysis");
+      else if (v.includes("analysis") || v.includes("analytic") || v.includes("power bi")) normalised.push("Data Analysis");
       else if (v.includes("logo") || v.includes("brand")) normalised.push("Logo Design");
     });
-    const services = [...new Set(normalised)];
+    const services = [...new Set(normalised.length ? normalised : checkedValues("lead-service"))];
     if (!services.length) {
-      return { handled: true, answer: "Which service should I find clients for: Excel and data work, Google Sheets, video editing, websites, social media, data analysis, or logo design?" };
+      return { handled: true, answer: "Which services should I search for? Choose Excel/data analytics, websites, cafe and restaurant marketing, CINE AI animation, video editing, social media, or logo design in the Lead Generation form." };
     }
 
     if (!businessType || !location) {
@@ -145,12 +148,12 @@
     const payload = {
       businessType,
       location,
-      keywords: String(plan.keywords || "").trim(),
-      limit: Math.min(50, Math.max(1, Number(plan.limit) || 25)),
+      keywords: String(plan.keywords || document.getElementById("lead-keywords")?.value || "").trim(),
+      limit: Math.min(20, Math.max(1, Number(plan.limit) || Number(document.getElementById("lead-limit")?.value) || 20)),
       sources: sources.length ? sources : ["Google Search", "Business Websites"],
       services,
-      market: ["india", "international", "both"].includes(plan.market) ? plan.market : "both",
-      businessModel: ["freelance", "agency", "both"].includes(plan.businessModel) ? plan.businessModel : "both",
+      market: ["india", "international", "both"].includes(String(plan.market || "").toLowerCase()) ? String(plan.market).toLowerCase() : (document.getElementById("lead-market")?.value || "both"),
+      businessModel: ["freelance", "agency", "both"].includes(String(plan.businessModel || "").toLowerCase()) ? String(plan.businessModel).toLowerCase() : (document.getElementById("lead-business-model")?.value || "both"),
       filters
     };
 
