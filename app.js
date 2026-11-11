@@ -29,6 +29,8 @@ KNOWN SERVICE AREAS
 - Excel work, data entry, data cleaning, Google Sheets, reports, dashboards and trackers.
 - Data analysis, basic SQL, Power BI and business reporting.
 - Video editing, promotional reels, content creation and social media management.
+- Flat 2D vector motion graphics and short animated videos made with CINE AI.
+- Cafe and restaurant marketing, promotional campaigns, social content and local business outreach.
 - Website creation, landing pages, logo/brand design and business promotion.
 - Customer support, CRM setup, lead research and outreach.
 Manan is building the WEDNESDAY assistant and wants to keep initial spending at ₹0. Prefer free/local-first solutions and disclose when a task genuinely requires a paid API, account, hosting plan or user action.
@@ -43,6 +45,9 @@ CORE RESPONSIBILITIES
 7. Teach Excel, data analysis, coding, websites, AI tools, marketing and sales in beginner-friendly steps.
 8. Troubleshoot WEDNESDAY and other projects carefully; inspect existing code before suggesting replacement.
 9. Turn vague goals into a short, realistic action plan and help complete it.
+10. For daily check-ins, summarize today's recorded activity and recommend the next useful action. Mention blockers or pipeline details only when available; never imply a scheduled notification unless one is configured. Make clear when counts are local to this browser and do not imply revenue or clients won.
+11. Help compare business ideas, create simple offers and pricing drafts, and prioritize low-cost ways to get the first client.
+12. For stock-market questions, teach concepts and help analyze user-provided or currently verified public information. WEDNESDAY has no connected market-data feed; when a verified source is unavailable, say so and ask for dated data rather than guessing. Clearly date data, explain uncertainty and risk, never promise returns or present a guaranteed or personalized buy/sell instruction. Never place trades.
 
 TRUTH AND SAFETY RULES
 - Clearly distinguish verified facts, estimates, assumptions and suggestions.
@@ -915,6 +920,29 @@ function renderDiscoveredLeads() {
 function initializeLeadGeneration() {
   const searchButton = $("lead-search-btn");
   const clearButton = $("lead-clear-btn");
+  const locationList = $("lead-location-suggestions");
+  const recentAreasKey = "wednesday_recent_lead_areas";
+  const readRecentAreas = () => {
+    try {
+      const value = JSON.parse(localStorage.getItem(recentAreasKey) || "[]");
+      return Array.isArray(value) ? value.filter(item => typeof item === "string").slice(0, 8) : [];
+    } catch (_) { return []; }
+  };
+  const renderRecentAreas = () => {
+    if (!locationList) return;
+    locationList.innerHTML = readRecentAreas().map(area => '<option value="' + escapeHTML(area) + '"></option>').join("");
+  };
+  const rememberArea = area => {
+    const cleaned = String(area || "").trim();
+    if (!cleaned) return;
+    try {
+      const areas = [cleaned, ...readRecentAreas().filter(item => item.toLowerCase() !== cleaned.toLowerCase())].slice(0, 8);
+      localStorage.setItem(recentAreasKey, JSON.stringify(areas));
+    } catch (_) {}
+    renderRecentAreas();
+  };
+  renderRecentAreas();
+  window.WEDNESDAY_REMEMBER_LEAD_AREA = rememberArea;
 
   if (searchButton) {
     searchButton.addEventListener("click", async () => {
@@ -925,17 +953,25 @@ function initializeLeadGeneration() {
 
       const services = getCheckedValues("lead-service");
       const sources = getCheckedValues("lead-source");
-      const businessType = $("lead-business-type")?.value.trim();
+      const businessTypeInput = $("lead-business-type")?.value.trim();
       const location = $("lead-location")?.value.trim();
       const keywords = $("lead-keywords")?.value.trim();
       const market = $("lead-market")?.value || "both";
       const businessModel = $("lead-business-model")?.value || "both";
       const limit = Number($("lead-limit")?.value || 25);
 
-      if (!services.length || !businessType || !location) {
-        showStatus("lead-search-status", "Choose a service and enter a business type and location.", true);
+      if (!services.length || !location) {
+        showStatus("lead-search-status", "Choose a service and enter the area to search. Business type can be left blank for a suggested audience.", true);
         return;
       }
+      const businessType = businessTypeInput || (services.length === 1 && services[0] === "Cafe & Restaurant Marketing"
+        ? "cafes and restaurants"
+        : services.length === 1 && services[0] === "CINE AI 2D Animation"
+          ? "small businesses and local brands needing animated promotions"
+          : services.length > 1 && services.includes("Cafe & Restaurant Marketing")
+            ? "small businesses, cafes and restaurants"
+            : "small businesses and startups");
+      if ($("lead-business-type") && !businessTypeInput) $("lead-business-type").value = businessType;
 
       if (!supabaseClient || !supabaseAuthReady) {
         showStatus("lead-search-status", "Live lead search needs your WEDNESDAY account connected. Sign in first, then configure the search provider as described in setup.", true);
@@ -977,6 +1013,7 @@ function initializeLeadGeneration() {
         if (data?.error) throw new Error(data.error);
 
         discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
+        rememberArea(location);
         window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
         if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();

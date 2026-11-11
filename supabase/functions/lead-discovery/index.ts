@@ -91,7 +91,7 @@ function scoreProspect(text: string, services: string[], phone: string, email: s
   const lower = text.toLowerCase();
   let score = 20;
   const reasons: string[] = [];
-  const hiringSignals = ["hiring freelancer", "looking for freelancer", "freelancer required", "need a freelancer", "looking for a developer", "website developer required", "excel expert required", "data analyst required", "need a website", "need website", "request a quote", "get a quote", "contact for project", "project requirement", "job opening for"];
+  const hiringSignals = ["hiring freelancer", "looking for freelancer", "freelancer required", "need a freelancer", "looking for a developer", "website developer required", "excel expert required", "data analyst required", "need a website", "need website", "request a quote", "get a quote", "contact for project", "project requirement", "job opening for", "looking for a social media manager", "marketing agency required", "need a video editor", "animation project"];
   const hiringHits = hiringSignals.filter(term => lower.includes(term));
   if (hiringHits.length) { score += Math.min(35, hiringHits.length * 18); reasons.push("Possible active hiring or project request"); }
   const serviceSignals: Record<string, string[]> = {
@@ -100,10 +100,14 @@ function scoreProspect(text: string, services: string[], phone: string, email: s
     "Google Sheets Automation": ["google sheets", "google spreadsheet", "sheets automation", "automate spreadsheet", "shared spreadsheet", "google workspace"],
     "Data Analysis": ["business intelligence", "data analysis", "analytics", "monthly report", "performance report", "dashboard", "reporting"],
     "Website Development": ["website development", "web developer", "website redesign", "website design", "web development", "online booking", "ecommerce website", "website under construction", "launching soon", "no website"],
+    "Video Editing": ["video editing", "video editor", "promotional video", "short-form video", "reels", "youtube shorts"],
+    "Social Media Management": ["social media management", "social media manager", "instagram marketing", "content calendar", "social media posts"],
+    "Cafe & Restaurant Marketing": ["cafe marketing", "café marketing", "restaurant marketing", "restaurant promotion", "food photography", "menu promotion", "instagram marketing", "social media manager"],
+    "CINE AI 2D Animation": ["2d animation", "vector animation", "motion graphics", "animated explainer", "promotional animation", "animated promo"],
   };
   const matchedServices = services.filter(service => (serviceSignals[service] || []).some(term => lower.includes(term)));
   if (matchedServices.length) { score += Math.min(25, matchedServices.length * 12); reasons.push("Public text matches the service offered"); }
-  const needSignals = ["outdated website", "website not working", "under construction", "coming soon", "manual process", "manual entry", "spreadsheet", "reporting", "inventory", "booking", "online orders", "multiple locations", "growing business"];
+  const needSignals = ["outdated website", "website not working", "under construction", "coming soon", "manual process", "manual entry", "spreadsheet", "reporting", "inventory", "booking", "online orders", "multiple locations", "growing business", "inactive instagram", "outdated social", "menu", "social media", "new location", "opening soon"];
   const needHits = needSignals.filter(term => lower.includes(term));
   if (needHits.length) { score += Math.min(15, needHits.length * 3); reasons.push("Potential workflow or website improvement signal"); }
   if (phone || email || whatsapp) { score += 10; reasons.push("Public business contact detail found"); }
@@ -155,27 +159,42 @@ serve(async (request) => {
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
     const prioritisePublicContact = filters.publicContact === true;
-    const limit = Math.max(1, Math.min(25, Number(input.limit) || 10));
+    const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
 
+    const serviceIntents: Record<string, string> = {
+      "Excel Reporting & Dashboards": "Excel spreadsheet reporting dashboards inventory sales tracking",
+      "Excel / Data Entry": "Excel data entry spreadsheet cleanup records",
+      "Google Sheets Automation": "Google Sheets shared trackers spreadsheet automation",
+      "Data Analysis": "data analytics business intelligence reporting dashboards",
+      "Website Development": "business website redesign website development online booking",
+      "Video Editing": "short promotional video editing reels video editor",
+      "Social Media Management": "small business social media marketing content management",
+      "Logo Design": "small business branding logo design",
+      "Cafe & Restaurant Marketing": "cafes restaurants local marketing social media promotions menu content",
+      "CINE AI 2D Animation": "small business 2D vector animation motion graphics animated promotional video"
+    };
+    const intentTerms = [...new Set(services.map(service => serviceIntents[service] || service))].join(" ");
     const query = [
       businessType,
       location,
       keywords,
-      services.join(" "),
-      services.includes("Excel Reporting & Dashboards") ? "businesses with spreadsheet reporting inventory sales tracking manual excel reporting needs" : "",
-      services.includes("Google Sheets Automation") ? "businesses using Google Sheets shared trackers workflow automation repetitive reporting" : "",
-      services.includes("Website Development") ? "small businesses with outdated website missing website website redesign online booking ecommerce web development" : "",
-      "businesses asking for quotes project requirements hiring freelance spreadsheet developer web developer",
-      sources.length ? `public pages and listings from ${sources.join(" ")}` : "",
-      market === "international" ? "international business" : market === "india" ? "India-based business" : "",
-      businessModel === "agency" ? "business needing creative agency marketing services" : businessModel === "freelance" ? "business needing freelance professional services" : "",
-      prioritiseNoWebsite ? "small business website missing no official website" : "",
-      prioritiseWeakSocial ? "business social media page inactive irregular posting low engagement" : "",
-      prioritisePublicContact ? "public business phone email contact details" : "business official contact website",
-      "business official name company name contact us phone number telephone mobile number WhatsApp wa.me official website"
-    ].filter(Boolean).join(" ");
+      intentTerms,
+      businessModel === "agency" ? "local marketing agency services" : businessModel === "freelance" ? "freelance services" : "",
+      prioritiseNoWebsite ? "missing or outdated official website" : "",
+      prioritiseWeakSocial ? "inactive social media or irregular posting" : "",
+      prioritisePublicContact ? "official public business contact phone email" : "official business website contact"
+    ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+
+    const sourceDomains: Record<string, string[]> = {
+      "Google Maps": ["google.com"],
+      Instagram: ["instagram.com"],
+      Facebook: ["facebook.com"],
+      LinkedIn: ["linkedin.com"],
+      Justdial: ["justdial.com"]
+    };
+    const includeDomains = [...new Set(sources.flatMap(source => sourceDomains[source] || []))];
 
     // One basic-search request costs one Tavily credit.
     const response = await fetch("https://api.tavily.com/search", {
@@ -189,6 +208,8 @@ serve(async (request) => {
         topic: "general",
         search_depth: "basic",
         max_results: Math.min(20, Math.max(5, limit)),
+        ...(includeDomains.length ? { include_domains: includeDomains, include_domains_mode: "prefer" } : {}),
+        ...(market === "india" || (market === "both" && /\bindia\b/i.test(location)) ? { country: "india" } : {}),
         include_answer: false,
         include_raw_content: true,
       }),

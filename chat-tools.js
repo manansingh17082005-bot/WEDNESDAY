@@ -28,7 +28,7 @@
         messages: [
           {
             role: "system",
-            content: "Extract a business lead-search request as JSON only. Do not invent missing details. Return exactly: {\"businessType\":string,\"location\":string,\"services\":string[],\"keywords\":string,\"limit\":number,\"market\":\"india\"|\"international\"|\"both\",\"businessModel\":\"freelance\"|\"agency\"|\"both\"}. Services should preserve the user's wording, e.g. Excel and Google Sheets, data cleaning, bookkeeping, video editing. If a field is absent, use an empty string or empty array; default limit 25, market both, businessModel both."
+            content: "Extract a business lead-search request as JSON only. Do not invent missing details. Return exactly: {\"businessType\":string,\"location\":string,\"services\":string[],\"keywords\":string,\"limit\":number,\"market\":\"india\"|\"international\"|\"both\"|\"\",\"businessModel\":\"freelance\"|\"agency\"|\"both\"|\"\"}. Services should preserve the user's wording, e.g. Excel, data analytics, CINE AI 2D animation, cafe marketing or website design. For fields absent from the message, return empty string, empty array, or limit 0; do not choose defaults."
           },
           { role: "user", content: message }
         ]
@@ -107,13 +107,16 @@
     }
 
     const plan = await extractSearchPlan(message, signal);
-    const businessType = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
+    const businessTypeInput = String(plan.businessType || document.getElementById("lead-business-type")?.value || "").trim();
     const location = String(plan.location || document.getElementById("lead-location")?.value || "").trim();
-    const rawServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : checkedValues("lead-service");
+    const extractedServices = Array.isArray(plan.services) ? plan.services.filter(x => typeof x === "string" && x.trim()) : [];
+    const rawServices = extractedServices.length ? extractedServices : checkedValues("lead-service");
     const normalised = [];
     rawServices.forEach(value => {
       const v = value.toLowerCase();
-      if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
+      if (v.includes("cine ai") || v.includes("2d animation") || v.includes("motion graphic") || v.includes("vector animation")) normalised.push("CINE AI 2D Animation");
+      else if ((v.includes("cafe") || v.includes("café") || v.includes("restaurant")) && (v.includes("marketing") || v.includes("promotion") || v.includes("social"))) normalised.push("Cafe & Restaurant Marketing");
+      else if (v.includes("excel") || v.includes("spreadsheet") || v.includes("data entry") || v.includes("data clean")) {
         if (v.includes("report") || v.includes("dashboard") || v.includes("mis")) normalised.push("Excel Reporting & Dashboards");
         normalised.push("Excel / Data Entry");
       }
@@ -121,18 +124,25 @@
       else if (v.includes("video") || v.includes("reel")) normalised.push("Video Editing");
       else if (v.includes("website") || v.includes("web development")) normalised.push("Website Development");
       else if (v.includes("social") || v.includes("instagram")) normalised.push("Social Media Management");
-      else if (v.includes("analysis") || v.includes("power bi") || v.includes("analytics")) normalised.push("Data Analysis");
+      else if (v.includes("analysis") || v.includes("analytic") || v.includes("power bi")) normalised.push("Data Analysis");
       else if (v.includes("logo") || v.includes("brand")) normalised.push("Logo Design");
     });
-    const services = [...new Set(normalised)];
+    const services = [...new Set(normalised.length ? normalised : checkedValues("lead-service"))];
+    const businessType = businessTypeInput || (services.length === 1 && services[0] === "Cafe & Restaurant Marketing"
+      ? "cafes and restaurants"
+      : services.length === 1 && services[0] === "CINE AI 2D Animation"
+        ? "small businesses and local brands needing animated promotions"
+        : services.length > 1 && services.includes("Cafe & Restaurant Marketing")
+          ? "small businesses, cafes and restaurants"
+          : "small businesses and startups");
     if (!services.length) {
-      return { handled: true, answer: "Which service should I find clients for: Excel and data work, Google Sheets, video editing, websites, social media, data analysis, or logo design?" };
+      return { handled: true, answer: "Which services should I search for? Choose Excel/data analytics, websites, cafe and restaurant marketing, CINE AI animation, video editing, social media, or logo design in the Lead Generation form." };
     }
 
-    if (!businessType || !location) {
+    if (!location) {
       return {
         handled: true,
-        answer: "I can run that search. Which business type and location should I target? For example: small businesses in Noida."
+        answer: "Which area should I search? Enter any neighborhood, city, state or country in the Lead Generation location box. The business type can stay blank and I’ll suggest an audience from your selected service."
       };
     }
 
@@ -145,12 +155,12 @@
     const payload = {
       businessType,
       location,
-      keywords: String(plan.keywords || "").trim(),
-      limit: Math.min(50, Math.max(1, Number(plan.limit) || 25)),
+      keywords: String(plan.keywords || document.getElementById("lead-keywords")?.value || "").trim(),
+      limit: Math.min(20, Math.max(1, Number(plan.limit) || Number(document.getElementById("lead-limit")?.value) || 20)),
       sources: sources.length ? sources : ["Google Search", "Business Websites"],
       services,
-      market: ["india", "international", "both"].includes(plan.market) ? plan.market : "both",
-      businessModel: ["freelance", "agency", "both"].includes(plan.businessModel) ? plan.businessModel : "both",
+      market: ["india", "international", "both"].includes(String(plan.market || "").toLowerCase()) ? String(plan.market).toLowerCase() : (document.getElementById("lead-market")?.value || "both"),
+      businessModel: ["freelance", "agency", "both"].includes(String(plan.businessModel || "").toLowerCase()) ? String(plan.businessModel).toLowerCase() : (document.getElementById("lead-business-model")?.value || "both"),
       filters
     };
 
@@ -173,6 +183,7 @@
       discoveredLeads = leads;
       if (typeof renderDiscoveredLeads === "function") renderDiscoveredLeads();
     }
+    window.WEDNESDAY_REMEMBER_LEAD_AREA?.(location);
     ["lead-business-type", "lead-location", "lead-keywords"].forEach((id, i) => {
       const el = document.getElementById(id);
       if (el) el.value = [businessType, location, payload.keywords][i];
@@ -213,25 +224,38 @@
   }
 
   function isProgressRequest(message) {
-    return /\b(progress|how am i doing|my activity|my performance|business report|sales progress|what have i done|how many leads|weekly report)\b/i.test(message);
+    return /\b(progress|how am i doing|my activity|my performance|business report|sales progress|what have i done|how many leads|weekly report|daily (?:briefing|update|report)|today(?:'s|s)? (?:briefing|update|report))\b/i.test(message);
   }
   function progressReport() {
-    const s = window.WEDNESDAY_ACTIVITY?.summary?.();
+    const activity = window.WEDNESDAY_ACTIVITY;
+    const s = activity?.summary?.();
     if (!s) return "I haven't started tracking business activity yet. Ask me to research prospects, review leads and prepare outreach, and I'll report your progress here.";
+    const history = activity.history?.() || [];
+    const localDayKey = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    const todayKey = localDayKey(new Date());
+    const todayEvents = history.filter(event => {
+      const date = new Date(event.at);
+      return !Number.isNaN(date.getTime()) && localDayKey(date) === todayKey;
+    });
+    const todayCount = type => todayEvents.filter(event => event.type === type).reduce((sum, event) => sum + (Number(event.count) || 1), 0);
+    const today = {
+      chats: todayCount("chat_message"),
+      searches: todayCount("lead_search"),
+      leads: todayCount("leads_found"),
+      reviewed: todayCount("lead_reviewed"),
+      drafts: todayCount("outreach_draft"),
+      contacted: todayCount("contacted")
+    };
     const next = s.leadsFound === 0 ? "Start by asking me to find prospects for one service in a specific city." : s.leadsReviewed === 0 ? "Review the leads I found and choose the strongest matches." : s.drafts === 0 ? "Prepare a personalised first-contact draft." : s.contacted === 0 ? "Review a draft and contact one suitable prospect yourself." : "Update your pipeline, record replies and schedule follow-ups.";
     return [
-      "Your WEDNESDAY business progress so far:",
-      "Chat interactions: " + s.chatMessages,
-      "Live searches: " + s.searches,
-      "Public leads discovered: " + s.leadsFound,
-      "Leads reviewed: " + s.leadsReviewed,
-      "CRM records added: " + s.crmAdded,
-      "Outreach drafts prepared: " + s.drafts,
-      "Prospects marked contacted: " + s.contacted,
+      "Your WEDNESDAY daily business check-in:",
+      "Today: " + today.chats + " chat interactions, " + today.searches + " searches, " + today.leads + " leads discovered, " + today.reviewed + " reviewed, " + today.drafts + " outreach drafts, " + today.contacted + " marked contacted.",
       "",
-      "My recommendation: " + next,
+      "All-time WEDNESDAY activity: " + s.searches + " searches, " + s.leadsFound + " leads discovered, " + s.leadsReviewed + " reviewed, " + s.crmAdded + " CRM records, " + s.drafts + " drafts, " + s.contacted + " marked contacted.",
       "",
-      "I only count activity recorded inside WEDNESDAY. These numbers do not mean a client has been won."
+      "Recommended next step: " + next,
+      "",
+      "These activity counts are stored in this browser. They do not mean a client has been won or revenue earned."
     ].join("\n");
   }
   window.WEDNESDAY_CHAT_TOOLS = {
