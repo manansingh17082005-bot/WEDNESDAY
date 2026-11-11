@@ -942,6 +942,7 @@ function initializeLeadGeneration() {
     renderRecentAreas();
   };
   renderRecentAreas();
+  window.WEDNESDAY_REMEMBER_LEAD_AREA = rememberArea;
 
   if (searchButton) {
     searchButton.addEventListener("click", async () => {
