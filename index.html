@@ -247,7 +247,7 @@
 
         <div class="panel">
           <div class="panel-head">
-            <div><span class="eyebrow">STEP 01</span><h3>What service are you offering?</h3></div>
+            <div><span class="eyebrow">STEP 01</span><h3>What service are you offering?</h3><p class="muted">Choose one service per search for more relevant results. Run a separate search for each offer.</p></div>
           </div>
 
           <div class="lead-service-grid">
@@ -259,6 +259,8 @@
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Social Media Management"><span>◎</span><b>Social Media Management</b><small>Content, posting and account handling</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Data Analysis"><span>▥</span><b>Data Analysis</b><small>Reports, dashboards and insights</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Logo Design"><span>✎</span><b>Logo Design</b><small>Brand identity and creative design</small></label>
+            <label class="lead-choice"><input type="checkbox" name="lead-service" value="Cafe &amp; Restaurant Marketing"><span>☕</span><b>Cafe &amp; Restaurant Marketing</b><small>Promotions, social content and local campaigns</small></label>
+            <label class="lead-choice"><input type="checkbox" name="lead-service" value="CINE AI 2D Animation"><span>✦</span><b>CINE AI 2D Animation</b><small>Short illustrated promo videos for businesses</small></label>
           </div>
         </div>
 
@@ -299,29 +301,28 @@
               <select id="lead-business-model"><option value="both" selected>Freelance + agency services</option><option value="freelance">Freelance services</option><option value="agency">Agency services</option></select>
             </label>
             <label>Search keywords
-              <input id="lead-keywords" type="text" placeholder="Example: newly opened cafe, small business">
+              <input id="lead-keywords" type="text" placeholder="Example: new opening, hiring a web developer, manual reporting">
             </label>
             <label>Maximum results
               <select id="lead-limit">
                 <option value="10">10 leads</option>
-                <option value="25" selected>25 leads</option>
-                <option value="50">50 leads</option>
+                <option value="20" selected>20 leads max</option>
               </select>
             </label>
           </div>
 
           <div class="lead-filter-row">
-            <label><input id="lead-filter-website" type="checkbox"> Prioritise businesses without a website</label>
-            <label><input id="lead-filter-social" type="checkbox"> Prioritise weak or inactive social pages</label>
-            <label><input id="lead-filter-contact" type="checkbox" checked> Prioritise publicly listed business contact details</label>
+            <label><input id="lead-filter-website" type="checkbox"> Require evidence of no or outdated website</label>
+            <label><input id="lead-filter-social" type="checkbox"> Require evidence of weak or inactive social pages</label>
+            <label><input id="lead-filter-contact" type="checkbox" checked> Only include a public contact detail (verify before contacting)</label>
           </div>
 
           <div class="button-row">
-            <button type="button" class="primary-btn" id="lead-search-btn">Find Real Leads ↗</button>
+            <button type="button" class="primary-btn" id="lead-search-btn">Find Qualified Prospects ↗</button>
             <button type="button" class="secondary-btn" id="lead-clear-btn">Clear filters</button>
           </div>
 
-          <div class="notice"><b>How WEDNESDAY ranks prospects</b><p>It looks for public evidence of project requests, hiring language, service-related problems, and usable business contact details. A score is a research priority—not a probability that the business will hire you. Always verify the evidence before contacting.</p></div>
+          <div class="notice"><b>How WEDNESDAY ranks prospects</b><p>Wednesday keeps only results that match your selected service and show a public buying, growth, or business-problem signal. It shows the evidence and source so you can check fit before contacting. A score is a research priority, not a hiring probability.</p></div>
           <p id="lead-search-status" class="muted" role="status" aria-live="polite">Choose your services and target audience to prepare a search plan.</p>
         </div>
 

@@ -850,7 +850,7 @@ function renderDiscoveredLeads() {
               <td>${lead.whatsappNumber ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(lead.whatsappNumber) + '" target="_blank" rel="noopener noreferrer">+' + escapeHTML(lead.whatsappNumber) + ' · Open WhatsApp ↗</a><small>Public WhatsApp link found</small>' : (lead.phone ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(String(lead.phone).replace(/\D/g, "")) + '" target="_blank" rel="noopener noreferrer">Check public phone on WhatsApp ↗</a><small>Not verified as a WhatsApp account</small>' : 'Not found')}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
               <td>${escapeHTML(lead.source || "Web search")}</td>
-              <td><span class="client-status">${lead.contactVerified ? "Public contact found" : "Needs review"}</span></td>
+              <td><span class="client-status">${lead.publicContactFound ? "Listed publicly · verify details" : "No public contact found"}</span></td>
               <td><button type="button" class="secondary-btn" data-lead-outreach="${index}">Prepare AI pitch ↗</button></td>
             </tr>`
           ).join("")}
@@ -932,8 +932,8 @@ function initializeLeadGeneration() {
       const businessModel = $("lead-business-model")?.value || "both";
       const limit = Number($("lead-limit")?.value || 25);
 
-      if (!services.length || !businessType || !location) {
-        showStatus("lead-search-status", "Choose a service and enter a business type and location.", true);
+      if (services.length !== 1 || !businessType || !location) {
+        showStatus("lead-search-status", "Choose exactly one service, then enter the type of business and area to find focused prospects.", true);
         return;
       }
 
@@ -943,7 +943,7 @@ function initializeLeadGeneration() {
       }
 
       searchButton.disabled = true;
-      showStatus("lead-search-status", "Searching public web listings for real business leads…");
+      showStatus("lead-search-status", "Searching for one service in your chosen area and checking for public buying or growth signals…");
 
       try {
         const { data: sessionData } = await supabaseClient.auth.getSession();
@@ -980,10 +980,8 @@ function initializeLeadGeneration() {
         window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
         if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();
-        showStatus("lead-search-status", `Found ${discoveredLeads.length} public search result(s). Preparing your Excel report…`);
-        if (discoveredLeads.length && window.XLSX) {
-          try { downloadLeadExcel(); } catch (exportError) { console.warn("Automatic Excel download was blocked:", exportError); }
-        }
+        if (discoveredLeads.length) showStatus("lead-search-status", `Found ${discoveredLeads.length} evidence-qualified prospect(s). Review each signal and source; use Download Excel when you are ready.`);
+        else showStatus("lead-search-status", "No prospects met the evidence filters. Try a nearby area, add a specific trigger keyword, or remove a strict website/social/contact filter.", true);
       } catch (error) {
         console.error("Live lead search error:", error);
         showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
