@@ -73,3 +73,26 @@
 .lead-required-filter>div{display:grid;gap:3px}
 .lead-required-filter b{font-size:10px}
 .lead-required-filter small{color:#93bba5;font-size:9px;line-height:1.4}
+
+
+/* Present wide lead rows as review cards instead of a cramped multi-column table */
+#page-lead-generation .lead-table{display:block;width:100%;min-width:0}
+#page-lead-generation .lead-table thead{display:none}
+#page-lead-generation .lead-table tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr));gap:12px}
+#page-lead-generation .lead-table tr{position:relative;display:flex;flex-direction:column;gap:8px;padding:14px;background:#101725;border:1px solid #293449;border-radius:12px}
+#page-lead-generation .lead-table td{display:block;max-width:none;min-width:0!important;padding:0;border:0;overflow-wrap:anywhere;line-height:1.5}
+#page-lead-generation .lead-table td:nth-child(1){position:absolute;top:14px;right:14px}
+#page-lead-generation .lead-table td:nth-child(2){padding-right:32px}
+#page-lead-generation .lead-table td:nth-child(2) strong{display:block;font:700 14px Manrope;margin:0 0 6px}
+#page-lead-generation .lead-table td:nth-child(2) small{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;color:#aab5c7;font-size:10px;line-height:1.55;margin:0 0 7px}
+#page-lead-generation .lead-table td:nth-child(3){padding:9px 10px;background:#191a2a;border:1px solid #34334a;border-radius:8px}
+#page-lead-generation .lead-table td:nth-child(3) strong{color:#d9d2ff}
+#page-lead-generation .lead-table td:nth-child(4),#page-lead-generation .lead-table td:nth-child(5),#page-lead-generation .lead-table td:nth-child(6),#page-lead-generation .lead-table td:nth-child(7),#page-lead-generation .lead-table td:nth-child(8){padding-top:5px;color:#cbd5e1;font-size:10px}
+#page-lead-generation .lead-table td:nth-child(4)::before{content:'PUBLIC PHONE';display:block;color:#8492a8;font-size:8px;letter-spacing:1px}
+#page-lead-generation .lead-table td:nth-child(5)::before{content:'WHATSAPP';display:block;color:#8492a8;font-size:8px;letter-spacing:1px;margin-bottom:4px}
+#page-lead-generation .lead-table td:nth-child(6)::before{content:'EMAIL';display:block;color:#8492a8;font-size:8px;letter-spacing:1px}
+#page-lead-generation .lead-table td:nth-child(7)::before{content:'SOURCE';display:block;color:#8492a8;font-size:8px;letter-spacing:1px}
+#page-lead-generation .lead-table td:nth-child(8){color:#d3b889}
+#page-lead-generation .lead-table td:nth-child(9) .secondary-btn{width:100%;margin-top:4px}
+#page-lead-generation .lead-table a{overflow-wrap:anywhere}
+@media(max-width:650px){#page-lead-generation .lead-table tbody{grid-template-columns:1fr}.lead-results-toolbar{align-items:flex-start}}
