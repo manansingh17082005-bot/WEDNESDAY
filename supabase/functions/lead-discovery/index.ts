@@ -214,7 +214,7 @@ serve(async (request) => {
     const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
-    const requirePublicPhone = true;
+    const requirePublicPhone = true; // This search always returns a public phone for WhatsApp follow-up.
     const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
