@@ -27,25 +27,23 @@ function isIndiaLocation(location: string): boolean {
 
 function extractPublicPhone(text: string, location: string): string {
   const cleaned = text.replace(/&nbsp;|&#160;/gi, " ");
-  const india = cleaned.match(/(?:\+91|0091|91[\s().-]?)([6-9]\d{9})(?!\d)/);
-  if (india) return `+91 ${india[1]}`;
-  if (isIndiaLocation(location)) {
-    const local = cleaned.match(/(?:^|\D)([6-9]\d{9})(?!\d)/);
-    if (local) return `+91 ${local[1]}`;
-  }
-  const labelled = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel)\s*(?:number)?\s*[:：-]?\s*(\+?\d[\d\s().-]{7,18}\d)/i);
+  // Prefer numbers explicitly associated with a public business contact label.
+  const labelled = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel|whatsapp)[^\d]{0,45}(\+?\d[\d\s().-]{7,18}\d)/i);
   if (labelled) {
     const digits = labelled[1].replace(/\D/g, "");
-    if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+    if (digits.length >= 8 && digits.length <= 15) return digits.length === 10 && isIndiaLocation(location) ? `+91 ${digits}` : `+${digits}`;
   }
   const international = cleaned.match(/(?:\+|00)\s*(\d[\d\s().-]{7,17}\d)/);
   if (international) {
     const digits = international[1].replace(/\D/g, "");
     if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
   }
+  if (isIndiaLocation(location)) {
+    const localWithContext = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel|whatsapp)[^\d]{0,55}([6-9]\d{9})(?!\d)/i);
+    if (localWithContext) return `+91 ${localWithContext[1]}`;
+  }
   return "";
 }
-
 function extractPublicEmail(text: string): string {
   return text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
 }
@@ -216,7 +214,7 @@ serve(async (request) => {
     const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
-    const requirePublicPhone = filters.publicContact !== false;
+    const requirePublicPhone = true;
     const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
@@ -249,7 +247,7 @@ serve(async (request) => {
       market === "international" ? "business" : market === "india" ? "business in India" : "",
     ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     const sourceDomains: Record<string, string[]> = {
-      "Google Maps": ["google.com"], Instagram: ["instagram.com"], Facebook: ["facebook.com"],
+      Instagram: ["instagram.com"], Facebook: ["facebook.com"],
       LinkedIn: ["linkedin.com"], Justdial: ["justdial.com"],
     };
     const includeDomains = [...new Set(sources.flatMap(source => sourceDomains[source] || []))];
