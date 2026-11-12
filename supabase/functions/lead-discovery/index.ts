@@ -27,25 +27,23 @@ function isIndiaLocation(location: string): boolean {
 
 function extractPublicPhone(text: string, location: string): string {
   const cleaned = text.replace(/&nbsp;|&#160;/gi, " ");
-  const india = cleaned.match(/(?:\+91|0091|91[\s().-]?)([6-9]\d{9})(?!\d)/);
-  if (india) return `+91 ${india[1]}`;
-  if (isIndiaLocation(location)) {
-    const local = cleaned.match(/(?:^|\D)([6-9]\d{9})(?!\d)/);
-    if (local) return `+91 ${local[1]}`;
-  }
-  const labelled = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel)\s*(?:number)?\s*[:：-]?\s*(\+?\d[\d\s().-]{7,18}\d)/i);
+  // Prefer numbers explicitly associated with a public business contact label.
+  const labelled = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel|whatsapp)[^\d]{0,45}(\+?\d[\d\s().-]{7,18}\d)/i);
   if (labelled) {
     const digits = labelled[1].replace(/\D/g, "");
-    if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
+    if (digits.length >= 8 && digits.length <= 15) return digits.length === 10 && isIndiaLocation(location) ? `+91 ${digits}` : `+${digits}`;
   }
   const international = cleaned.match(/(?:\+|00)\s*(\d[\d\s().-]{7,17}\d)/);
   if (international) {
     const digits = international[1].replace(/\D/g, "");
     if (digits.length >= 8 && digits.length <= 15) return `+${digits}`;
   }
+  if (isIndiaLocation(location)) {
+    const localWithContext = cleaned.match(/(?:phone|telephone|mobile|call|contact|tel|whatsapp)[^\d]{0,55}([6-9]\d{9})(?!\d)/i);
+    if (localWithContext) return `+91 ${localWithContext[1]}`;
+  }
   return "";
 }
-
 function extractPublicEmail(text: string): string {
   return text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
 }
@@ -101,7 +99,7 @@ function scoreProspect(
     "Excel Reporting & Dashboards": ["excel reporting", "excel dashboard", "inventory report", "sales report", "microsoft excel", "management report"],
     "Google Sheets Automation": ["google sheets", "spreadsheet automation", "automate spreadsheets", "shared tracker", "google spreadsheet"],
     "Excel / Data Entry": ["data entry", "spreadsheet cleanup", "excel data entry", "manual data entry", "records entry"],
-    "Video Editing": ["video editor", "video editing", "promotional video", "reels editor", "short-form video"],
+    "Video Editing": ["video editing", "promotional video", "reels editor", "short-form video", "video content"],
     "Website Development": ["website redesign", "web development", "online booking website", "website under construction", "web developer", "ecommerce website"],
     "Social Media Management": ["social media management", "social media manager", "instagram content", "content calendar", "social media marketing"],
     "Data Analysis": ["data analysis", "business analytics", "data analyst", "business intelligence", "analytics dashboard"],
@@ -113,12 +111,12 @@ function scoreProspect(
     "Excel Reporting & Dashboards": ["manual reporting", "spreadsheet errors", "inventory reporting", "sales reporting takes", "reporting takes hours", "excel dashboard required"],
     "Google Sheets Automation": ["manual tracking", "repetitive spreadsheet", "spreadsheet errors", "manual data entry", "shared tracker"],
     "Excel / Data Entry": ["manual data entry", "data entry backlog", "spreadsheet cleanup", "records backlog", "manual records"],
-    "Video Editing": ["product launch", "new location", "opening soon", "promotional video", "video editor required", "reels editor"],
+    "Video Editing": ["promotional video", "video content", "reels", "short-form video", "product launch", "new product", "new location", "opening soon", "grand opening", "event", "live music", "new menu", "special offer"],
     "Website Development": ["website under construction", "website coming soon", "no website", "outdated website", "broken website", "website not working", "new location", "online booking"],
     "Social Media Management": ["opening soon", "newly opened", "grand opening", "new location", "irregular posting", "inactive instagram", "no recent posts", "last post"],
     "Data Analysis": ["manual reporting", "reporting delays", "performance dashboard", "sales reporting", "data dashboard", "reporting takes hours"],
     "Logo Design": ["new brand", "rebrand", "opening soon", "new business launch", "brand identity"],
-    "Cafe & Restaurant Marketing": ["opening soon", "newly opened", "grand opening", "new menu", "new location", "launching soon", "restaurant promotion"],
+    "Cafe & Restaurant Marketing": ["opening soon", "newly opened", "grand opening", "new menu", "new location", "launching soon", "restaurant promotion", "live music", "special offer", "online ordering"],
     "CINE AI 2D Animation": ["product launch", "new product", "promotional animation", "launching soon", "explainer video", "new location"],
   };
   const buyerSignals = [
@@ -140,31 +138,32 @@ function scoreProspect(
   const reasons: string[] = [];
   let score = Math.round(Math.max(0, Math.min(1, providerScore)) * 10);
   if (matchedTerms.length) {
-    score += 25;
-    reasons.push("Service fit: " + matchedTerms.slice(0, 2).map(term => '"' + term + '"').join(", "));
+    score += 10;
+    reasons.push("Service-related wording appears in the source; review it for context.");
   }
   if (buyerHits.length) {
-    score += Math.min(35, 25 + (buyerHits.length - 1) * 5);
-    reasons.push("Buying signal: " + buyerHits.slice(0, 2).map(term => '"' + term + '"').join(", "));
+    score += Math.min(35, 30 + (buyerHits.length - 1) * 5);
+    reasons.push("Direct buying signal: " + buyerHits.slice(0, 2).map(term => '"' + term + '"').join(", "));
   }
   if (opportunityHits.length) {
-    score += Math.min(20, 12 + (opportunityHits.length - 1) * 4);
-    reasons.push("Business need or growth signal: " + opportunityHits.slice(0, 3).map(term => '"' + term + '"').join(", "));
+    score += Math.min(25, 18 + (opportunityHits.length - 1) * 3);
+    reasons.push("Outreach opportunity signal: " + opportunityHits.slice(0, 3).map(term => '"' + term + '"').join(", "));
   }
-  const hasContact = Boolean(phone || email || whatsapp);
-  if (hasContact) {
-    score += 10;
-    reasons.push("A public contact detail appears on this source; confirm it belongs to the business.");
+  const hasPublicPhone = Boolean(phone || whatsapp);
+  if (hasPublicPhone) {
+    score += 25;
+    reasons.push("A public phone number was found. Open the WhatsApp check link to confirm the account before messaging.");
   }
   let hostname = "";
   try { hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch (_) {}
   const directoryHost = /(^|\.)(google|facebook|instagram|linkedin|justdial|youtube|wikipedia|yelp|tripadvisor|sulekha|indiamart)\./i.test(hostname);
   if (hostname && !directoryHost) {
-    score += 5;
-    reasons.push("Direct website source; verify the business identity.");
+    score += 10;
+    reasons.push("A business website or source page is available to review.");
   }
   const scoreValue = Math.max(0, Math.min(100, score));
   const tier = scoreValue >= 75 ? "High research priority" : scoreValue >= 55 ? "Medium research priority" : "Low research priority";
+  const hasActionableSignal = buyerHits.length > 0 || opportunityHits.length > 0;
   return {
     score: scoreValue,
     tier,
@@ -175,7 +174,7 @@ function scoreProspect(
     opportunityHits,
     websiteGapHits,
     weakSocialHits,
-    eligible: matchedTerms.length > 0 && (buyerHits.length > 0 || opportunityHits.length > 0),
+    eligible: hasActionableSignal && hasPublicPhone,
   };
 }
 serve(async (request) => {
@@ -215,7 +214,7 @@ serve(async (request) => {
     const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
-    const prioritisePublicContact = filters.publicContact === true;
+    const requirePublicPhone = true; // This search always returns a public phone for WhatsApp follow-up.
     const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
@@ -223,16 +222,16 @@ serve(async (request) => {
 
     const service = services[0];
     const serviceIntents: Record<string, string> = {
-      "Excel Reporting & Dashboards": "Excel dashboards inventory and sales reports manual reporting",
-      "Google Sheets Automation": "Google Sheets automation shared trackers repetitive manual tracking",
-      "Excel / Data Entry": "Excel data entry spreadsheet cleanup manual records workload",
-      "Video Editing": "promotional video editing reels short-form video product launch",
-      "Website Development": "website redesign broken outdated website online booking coming soon",
-      "Social Media Management": "social media management Instagram content calendar new business launch",
-      "Data Analysis": "business data analysis reporting delays dashboards performance reports",
-      "Logo Design": "logo design brand identity rebranding new business launch",
-      "Cafe & Restaurant Marketing": "cafe restaurant marketing grand opening new menu local promotions",
-      "CINE AI 2D Animation": "2D animated promotional video motion graphics product launch explainer",
+      "Excel Reporting & Dashboards": "inventory sales tracking business operations reporting needs contact phone",
+      "Google Sheets Automation": "business operations manual tracking workflow repetitive admin contact phone",
+      "Excel / Data Entry": "business records administration manual processing contact phone",
+      "Video Editing": "Instagram reels business promotions product launches events new products contact phone WhatsApp",
+      "Website Development": "business website online booking new location opening soon contact phone",
+      "Social Media Management": "business Instagram Facebook posts promotions opening new location contact phone",
+      "Data Analysis": "business sales inventory operations reporting dashboard needs contact phone",
+      "Logo Design": "new business opening new brand storefront contact phone",
+      "Cafe & Restaurant Marketing": "cafe restaurant new menu opening event offers Instagram contact phone WhatsApp",
+      "CINE AI 2D Animation": "local business product launch new product promotion events contact phone",
     };
     if (!serviceIntents[service]) return json({ error: "Choose a service from the list." }, 400, origin);
     const serviceIntent = serviceIntents[service];
@@ -244,11 +243,11 @@ serve(async (request) => {
       sources.length ? `public business listings from ${sources.join(" ")}` : "",
       prioritiseNoWebsite ? "business with no website website under construction outdated site" : "",
       prioritiseWeakSocial ? "business with inactive Instagram irregular posting no recent posts" : "",
-      prioritisePublicContact ? "official business contact phone or email" : "",
+      requirePublicPhone ? "public phone number WhatsApp" : "",
       market === "international" ? "business" : market === "india" ? "business in India" : "",
     ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     const sourceDomains: Record<string, string[]> = {
-      "Google Maps": ["google.com"], Instagram: ["instagram.com"], Facebook: ["facebook.com"],
+      Instagram: ["instagram.com"], Facebook: ["facebook.com"],
       LinkedIn: ["linkedin.com"], Justdial: ["justdial.com"],
     };
     const includeDomains = [...new Set(sources.flatMap(source => sourceDomains[source] || []))];
@@ -308,10 +307,10 @@ serve(async (request) => {
       const qualification = scoreProspect(combined, service, phone, email, whatsappNumber, url, providerScore);
       screenedCount++;
       if (!qualification.eligible) continue;
-      if (prioritisePublicContact && !phone && !email && !whatsappNumber) continue;
+      if (requirePublicPhone && !phone && !whatsappNumber) continue;
       if (prioritiseNoWebsite && !qualification.websiteGapHits.length) continue;
       if (prioritiseWeakSocial && !qualification.weakSocialHits.length) continue;
-      if (qualification.score < 45) continue;
+      if (qualification.score < 40) continue;
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
@@ -322,7 +321,7 @@ serve(async (request) => {
         phone,
         whatsappNumber,
         whatsappLink: whatsappNumber ? `https://wa.me/${whatsappNumber}` : "",
-        whatsappStatus: whatsappNumber ? "Public WhatsApp link found" : phone ? "Public phone found; WhatsApp not verified" : "Not found / not verified",
+        whatsappStatus: whatsappNumber ? "Public WhatsApp link listed; verify business identity" : phone ? "Public phone found; WhatsApp account not confirmed" : "Not found / not verified",
         email,
         address: "",
         website: url,
@@ -331,7 +330,7 @@ serve(async (request) => {
         searchQuery: query,
         status: "Needs review",
         contactVerified: false,
-        publicContactFound: Boolean(phone || email || whatsappNumber),
+        publicContactFound: Boolean(phone || whatsappNumber),
         openingDateVerified: false,
         priorityScore: qualification.score,
         priorityTier: qualification.tier,
@@ -354,7 +353,7 @@ serve(async (request) => {
       resultCount: leads.length,
       screenedCount,
       provider: "Tavily",
-      qualityRule: "A result must match the selected service and contain a public buying, need, or growth signal. When requested, it must also expose a public contact and evidence for the selected website/social filter.",
+      qualityRule: "A result must contain a service-specific buying or opportunity signal and a publicly listed phone number. WhatsApp accounts are not verified by search; open the check link before outreach. Website/social filters, if selected, remain strict.",
       creditsNote: "One basic Tavily search request was used. Scores rank evidence for review; they are not hiring probabilities. Public text does not prove budget, owner intent, contact ownership, or that a business will respond. Check the source before outreach.",
     }, 200, origin);
   } catch (error) {
