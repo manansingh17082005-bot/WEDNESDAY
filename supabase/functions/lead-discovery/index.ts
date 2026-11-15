@@ -213,7 +213,6 @@ serve(async (request) => {
     const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
-    const requirePublicPhone = false; // Contact details improve usability but must not suppress genuine prospects.
     const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
@@ -242,7 +241,6 @@ serve(async (request) => {
       sources.length ? `public business listings from ${sources.join(" ")}` : "",
       prioritiseNoWebsite ? "business with no website website under construction outdated site" : "",
       prioritiseWeakSocial ? "business with inactive Instagram irregular posting no recent posts" : "",
-      "",
       market === "international" ? "business" : market === "india" ? "business in India" : "",
     ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     const sourceDomains: Record<string, string[]> = {
@@ -299,6 +297,8 @@ serve(async (request) => {
       seen.add(key);
 
       const combined = `${title} ${content} ${url}`;
+      const intermediaryPattern = /\\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\\b/i;
+      if (intermediaryPattern.test(combined)) continue;
       const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
       const whatsappNumber = extractPublicWhatsApp(combined);
@@ -308,7 +308,7 @@ serve(async (request) => {
       if (!qualification.eligible) continue;
       if (prioritiseNoWebsite && !qualification.websiteGapHits.length) continue;
       if (prioritiseWeakSocial && !qualification.weakSocialHits.length) continue;
-      if (qualification.score < 40) continue;
+      if (qualification.score < 30) continue;
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
