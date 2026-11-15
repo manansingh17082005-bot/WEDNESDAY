@@ -724,6 +724,8 @@ function getLeadExcelRows() {
     const whatsappNumber = lead.whatsappNumber || extractWhatsAppNumber(lead);
     return {
       "Business Name": lead.name || "",
+      "Lead Mode": lead.leadType || lead.businessModel || "",
+      "Qualification": lead.qualification || "",
       "Contact Person": lead.contactPerson || "",
       "WhatsApp Number": whatsappNumber ? "+" + whatsappNumber : "",
       "WhatsApp Status": whatsappNumber ? "Public WhatsApp link found" : (lead.phone ? "Public phone available; WhatsApp not verified" : "Not found"),
@@ -754,8 +756,9 @@ function downloadLeadExcel() {
   const workbook = XLSX.utils.book_new();
   const leadsSheet = XLSX.utils.json_to_sheet(rows);
   leadsSheet["!cols"] = [
-    { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 27 }, { wch: 20 },
-    { wch: 30 }, { wch: 38 }, { wch: 18 }, { wch: 42 }, { wch: 18 }, { wch: 24 }, { wch: 70 }
+    { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 22 },
+    { wch: 27 }, { wch: 20 }, { wch: 30 }, { wch: 38 }, { wch: 18 },
+    { wch: 42 }, { wch: 18 }, { wch: 24 }, { wch: 70 }
   ];
   leadsSheet["!autofilter"] = { ref: leadsSheet["!ref"] || "A1:L1" };
   leadsSheet["!freeze"] = { xSplit: 0, ySplit: 1 };
@@ -769,7 +772,7 @@ function downloadLeadExcel() {
     { Field: "Total results", Value: rows.length },
     { Field: "WhatsApp links found", Value: rows.filter(row => row["WhatsApp Number"]).length },
     { Field: "WhatsApp verification", Value: "Only publicly visible WhatsApp links are labelled as found. Other phone numbers are not assumed to be WhatsApp." },
-    { Field: "Source", Value: "Tavily public web search. Verify details before contacting." }
+    { Field: "Source", Value: "Local DuckDuckGo public web search. Verify details before contacting." }
   ];
   const summarySheet = XLSX.utils.json_to_sheet(summary);
   summarySheet["!cols"] = [{ wch: 28 }, { wch: 100 }];
