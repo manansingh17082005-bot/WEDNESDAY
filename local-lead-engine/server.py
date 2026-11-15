@@ -47,7 +47,7 @@ SERVICES = {
   "problem":["low website traffic","poor online visibility","not generating online leads","digital marketing support"]}
 }
 INTERMEDIARY = ["job board","jobs portal","recruitment","staffing agency","placement agency","commission agent","lead seller","buy leads","sell leads","freelancer marketplace","project bidding","tender aggregator"]
-PROVIDER = ["we offer","our services","hire us","our agency provides","we provide","our portfolio","our team specializes"]
+PROVIDER = ["we offer digital marketing","our digital marketing services","we provide website development","our web development services","we offer social media management","our social media services","hire our agency","our video editing services","we provide excel services","our portfolio"]
 
 class PageParser(HTMLParser):
  def __init__(self):
@@ -158,12 +158,15 @@ def run_search(data):
      if title2: title=title2
     except Exception: pass
     qualification=qualify(item["title"]+" "+title,text,url,service,mode); screened+=1
+    filters=data.get("filters") or {}
+    if filters.get("noWebsite") and not any(term in (text+" "+item["title"]).lower() for term in ["no website","website under construction","website coming soon","outdated website","broken website"]): continue
+    if filters.get("weakSocial") and not any(term in (text+" "+item["title"]).lower() for term in ["inactive instagram","irregular posting","no recent posts","inactive social"]): continue
     if not qualification["ok"]: continue
     phone,email,whatsapp=contacts(text)
     if not (phone or email or whatsapp or text): continue
     key=re.sub(r"[^a-z0-9]","",(title or item["title"]).lower()) or host
     if key in found: continue
-    lead_mode="Freelancer" if qualification["grade"]=="A" else "Agency"
+    lead_mode="Freelancer" if any(term in query.lower() for term in SERVICES[service]["direct"]) else "Agency"
     found[key]={
      "id":key,"name":title,"company":title,"contactPerson":"","phone":phone,"email":email,
      "whatsappNumber":whatsapp,"whatsappLink":"https://wa.me/"+whatsapp if whatsapp else "",
