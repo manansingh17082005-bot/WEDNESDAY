@@ -150,10 +150,9 @@ function scoreProspect(
     reasons.push("Outreach opportunity signal: " + opportunityHits.slice(0, 3).map(term => '"' + term + '"').join(", "));
   }
   const hasPublicPhone = Boolean(phone || whatsapp);
-  if (hasPublicPhone) {
-    score += 25;
-    reasons.push("A public phone number was found. Open the WhatsApp check link to confirm the account before messaging.");
-  }
+  if (hasPublicPhone) reasons.push("A public phone number was found; verify that it belongs to this business before outreach.");
+  else if (email) reasons.push("A public email address was found; phone/WhatsApp was not present in the search result.");
+  else reasons.push("No direct contact detail was found in this search result; check the source website for its contact page.");
   let hostname = "";
   try { hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch (_) {}
   const directoryHost = /(^|\.)(google|facebook|instagram|linkedin|justdial|youtube|wikipedia|yelp|tripadvisor|sulekha|indiamart)\./i.test(hostname);
@@ -174,7 +173,7 @@ function scoreProspect(
     opportunityHits,
     websiteGapHits,
     weakSocialHits,
-    eligible: hasActionableSignal && hasPublicPhone,
+    eligible: hasActionableSignal,
   };
 }
 serve(async (request) => {
@@ -214,7 +213,6 @@ serve(async (request) => {
     const filters = input.filters && typeof input.filters === "object" ? input.filters : {};
     const prioritiseNoWebsite = filters.noWebsite === true;
     const prioritiseWeakSocial = filters.weakSocial === true;
-    const requirePublicPhone = true; // This search always returns a public phone for WhatsApp follow-up.
     const limit = Math.max(1, Math.min(20, Number(input.limit) || 10));
 
     if (!businessType || !location) return json({ error: "Business type and location are required." }, 400, origin);
@@ -243,7 +241,6 @@ serve(async (request) => {
       sources.length ? `public business listings from ${sources.join(" ")}` : "",
       prioritiseNoWebsite ? "business with no website website under construction outdated site" : "",
       prioritiseWeakSocial ? "business with inactive Instagram irregular posting no recent posts" : "",
-      requirePublicPhone ? "public phone number WhatsApp" : "",
       market === "international" ? "business" : market === "india" ? "business in India" : "",
     ].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     const sourceDomains: Record<string, string[]> = {
@@ -300,6 +297,8 @@ serve(async (request) => {
       seen.add(key);
 
       const combined = `${title} ${content} ${url}`;
+      const intermediaryPattern = /\\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\\b/i;
+      if (intermediaryPattern.test(combined)) continue;
       const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
       const whatsappNumber = extractPublicWhatsApp(combined);
@@ -307,10 +306,9 @@ serve(async (request) => {
       const qualification = scoreProspect(combined, service, phone, email, whatsappNumber, url, providerScore);
       screenedCount++;
       if (!qualification.eligible) continue;
-      if (requirePublicPhone && !phone && !whatsappNumber) continue;
       if (prioritiseNoWebsite && !qualification.websiteGapHits.length) continue;
       if (prioritiseWeakSocial && !qualification.weakSocialHits.length) continue;
-      if (qualification.score < 40) continue;
+      if (qualification.score < 30) continue;
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
@@ -330,7 +328,9 @@ serve(async (request) => {
         searchQuery: query,
         status: "Needs review",
         contactVerified: false,
-        publicContactFound: Boolean(phone || whatsappNumber),
+        publicContactFound: Boolean(phone || whatsappNumber || email),
+        contactMethod: phone || whatsappNumber ? "Phone/WhatsApp listed" : email ? "Email listed; phone not found" : "No contact extracted; check website",
+        leadMode: businessModel,
         openingDateVerified: false,
         priorityScore: qualification.score,
         priorityTier: qualification.tier,
@@ -353,7 +353,7 @@ serve(async (request) => {
       resultCount: leads.length,
       screenedCount,
       provider: "Tavily",
-      qualityRule: "A result must contain a service-specific buying or opportunity signal and a publicly listed phone number. WhatsApp accounts are not verified by search; open the check link before outreach. Website/social filters, if selected, remain strict.",
+      qualityRule: "A result must contain a service-specific buying or opportunity signal. Phone, WhatsApp and email are contact-completeness fields, not qualification requirements. WhatsApp accounts are not verified by search; check the source before outreach. Website/social filters, if selected, remain strict.",
       creditsNote: "One basic Tavily search request was used. Scores rank evidence for review; they are not hiring probabilities. Public text does not prove budget, owner intent, contact ownership, or that a business will respond. Check the source before outreach.",
     }, 200, origin);
   } catch (error) {
