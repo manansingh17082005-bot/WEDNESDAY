@@ -220,16 +220,16 @@ serve(async (request) => {
 
     const service = services[0];
     const serviceIntents: Record<string, string> = {
-      "Excel Reporting & Dashboards": "inventory sales tracking business operations reporting needs contact phone",
-      "Google Sheets Automation": "business operations manual tracking workflow repetitive admin contact phone",
-      "Excel / Data Entry": "business records administration manual processing contact phone",
-      "Video Editing": "Instagram reels business promotions product launches events new products contact phone WhatsApp",
-      "Website Development": "business website online booking new location opening soon contact phone",
-      "Social Media Management": "business Instagram Facebook posts promotions opening new location contact phone",
-      "Data Analysis": "business sales inventory operations reporting dashboard needs contact phone",
-      "Logo Design": "new business opening new brand storefront contact phone",
-      "Cafe & Restaurant Marketing": "cafe restaurant new menu opening event offers Instagram contact phone WhatsApp",
-      "CINE AI 2D Animation": "local business product launch new product promotion events contact phone",
+      "Excel Reporting & Dashboards": "inventory sales tracking business operations reporting needs",
+      "Google Sheets Automation": "business operations manual tracking workflow repetitive admin",
+      "Excel / Data Entry": "business records administration manual processing",
+      "Video Editing": "Instagram reels business promotions product launches events new products",
+      "Website Development": "business website online booking new location opening soon",
+      "Social Media Management": "business Instagram Facebook posts promotions opening new location",
+      "Data Analysis": "business sales inventory operations reporting dashboard needs",
+      "Logo Design": "new business opening new brand storefront",
+      "Cafe & Restaurant Marketing": "cafe restaurant new menu opening event offers Instagram",
+      "CINE AI 2D Animation": "local business product launch new product promotion events",
     };
     if (!serviceIntents[service]) return json({ error: "Choose a service from the list." }, 400, origin);
     const serviceIntent = serviceIntents[service];
@@ -297,8 +297,9 @@ serve(async (request) => {
       seen.add(key);
 
       const combined = `${title} ${content} ${url}`;
-      const intermediaryPattern = /\\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\\b/i;
-      if (intermediaryPattern.test(combined)) continue;
+      const intermediaryPattern = /\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\b/i;
+      const individualFreelancerPattern = /\b(?:freelance video editor|freelance graphic designer|freelance web developer|freelance social media manager|freelancer portfolio|freelance portfolio|available for freelance work|hire me as a freelancer|my freelance services|independent freelancer)\b/i;
+      if (intermediaryPattern.test(combined) || individualFreelancerPattern.test(combined)) continue;
       const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
       const whatsappNumber = extractPublicWhatsApp(combined);
