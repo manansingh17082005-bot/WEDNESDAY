@@ -848,7 +848,7 @@ function renderDiscoveredLeads() {
             <tr>
               <td><input type="checkbox" class="lead-select" data-lead-index="${index}" ${lead.added ? "disabled" : ""}></td>
               <td><strong>${escapeHTML(lead.name)}</strong><br><small>${escapeHTML(lead.snippet || "")}</small><br><a href="${escapeHTML(lead.website)}" target="_blank" rel="noopener noreferrer">Open source ↗</a></td>
-              <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>${escapeHTML(lead.priorityTier || "Heuristic research priority")}</small><br><small>${escapeHTML((lead.qualificationReasons || []).join(" · ") || "No strong buying signal found")}</small></td>
+              <td><strong>${getLeadResearchPriority(lead)}/100</strong><br><small>${escapeHTML(lead.leadType || lead.businessModel || "Lead")}</small><br><small>${escapeHTML(lead.priorityTier || "Heuristic research priority")}</small><br><small>${escapeHTML((lead.qualificationReasons || []).join(" · ") || "No strong buying signal found")}</small></td>
               <td>${escapeHTML(lead.phone || "Not found")}</td>
               <td>${lead.whatsappNumber ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(lead.whatsappNumber) + '" target="_blank" rel="noopener noreferrer">+' + escapeHTML(lead.whatsappNumber) + ' · Open WhatsApp ↗</a><small>Public WhatsApp link found</small>' : (lead.phone ? '<a class="lead-contact-link" href="https://wa.me/' + encodeURIComponent(String(lead.phone).replace(/\D/g, "")) + '" target="_blank" rel="noopener noreferrer">Check public phone on WhatsApp ↗</a><small>Not verified as a WhatsApp account</small>' : 'Not found')}</td>
               <td>${escapeHTML(lead.email || "Not found")}</td>
