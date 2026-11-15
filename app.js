@@ -915,6 +915,7 @@ function renderDiscoveredLeads() {
 function initializeLeadGeneration() {
   const searchButton = $("lead-search-btn");
   const clearButton = $("lead-clear-btn");
+  const LOCAL_LEAD_API = "http://127.0.0.1:8765/api/lead-search";
 
   if (searchButton) {
     searchButton.addEventListener("click", async () => {
@@ -922,7 +923,6 @@ function initializeLeadGeneration() {
         showStatus("lead-search-status", "WEDNESDAY is paused.", true);
         return;
       }
-
       const services = getCheckedValues("lead-service");
       const sources = getCheckedValues("lead-source");
       const businessType = $("lead-business-type")?.value.trim();
@@ -930,76 +930,61 @@ function initializeLeadGeneration() {
       const keywords = $("lead-keywords")?.value.trim();
       const market = $("lead-market")?.value || "both";
       const businessModel = $("lead-business-model")?.value || "both";
-      const limit = Number($("lead-limit")?.value || 25);
-
+      const limit = Number($("lead-limit")?.value || 20);
       if (services.length !== 1 || !businessType || !location) {
-        showStatus("lead-search-status", "Choose exactly one service, then enter the type of business and area to find focused prospects.", true);
+        showStatus("lead-search-status", "Choose one service, then enter a business type and location.", true);
         return;
       }
-
-      if (!supabaseClient || !supabaseAuthReady) {
-        showStatus("lead-search-status", "Live lead search needs your WEDNESDAY account connected. Sign in first, then configure the search provider as described in setup.", true);
-        return;
-      }
-
       searchButton.disabled = true;
-      showStatus("lead-search-status", "Finding local businesses with a relevant opportunity and public phone number…");
-
+      setWednesdayCharacterState("thinking");
+      showStatus("lead-search-status", "WEDNESDAY local engine is searching public web pages and checking buyer evidence…");
       try {
-        const { data: sessionData } = await supabaseClient.auth.getSession();
-        if (!sessionData?.session) throw new Error("Please sign in to WEDNESDAY before searching.");
-
-        const { data, error } = await supabaseClient.functions.invoke("lead-discovery", {
-          body: { businessType, location, keywords, limit, sources, services, market, businessModel, filters: { noWebsite: Boolean($("lead-filter-website")?.checked), weakSocial: Boolean($("lead-filter-social")?.checked), publicContact: Boolean($("lead-filter-contact")?.checked) } }
-        });
-        if (error) {
-          // Supabase wraps non-2xx Edge Function responses in FunctionsHttpError.
-          // Read the function's JSON body so setup/auth/provider errors are visible in the UI.
-          let functionMessage = "";
-          const responseContext = error.context;
-          if (responseContext && typeof responseContext.clone === "function") {
-            try {
-              const errorBody = await responseContext.clone().json();
-              functionMessage = errorBody?.error || errorBody?.message || "";
-            } catch (_) {
-              // The response may not contain JSON; fall back to status and SDK message.
+        const response = await fetch(LOCAL_LEAD_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            businessType, location, keywords, limit, sources, services, market, businessModel,
+            filters: {
+              noWebsite: Boolean($("lead-filter-website")?.checked),
+              weakSocial: Boolean($("lead-filter-social")?.checked)
             }
-          }
-          const statusCode = responseContext?.status;
-          if (functionMessage) {
-            throw new Error(functionMessage);
-          }
-          if (statusCode) {
-            throw new Error(`Lead search function returned HTTP ${statusCode}. ${error.message || "Check Supabase Edge Function logs and configuration."}`);
-          }
-          throw new Error(error.message || "Lead search function failed. Check Supabase Edge Function logs.");
-        }
-        if (data?.error) throw new Error(data.error);
-
-        discoveredLeads = Array.isArray(data?.leads) ? data.leads : [];
+          }),
+          signal: AbortSignal.timeout(90000)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || ("Local lead engine returned HTTP " + response.status + "."));
+        if (data.error) throw new Error(data.error);
+        discoveredLeads = Array.isArray(data.leads) ? data.leads : [];
         window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
         if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();
-        if (discoveredLeads.length) showStatus("lead-search-status", `Found ${discoveredLeads.length} prospect(s) with a public phone number and relevant signal. Review each source and check the number in WhatsApp before outreach.`);
-        else showStatus("lead-search-status", "No prospects matched both a relevant signal and public phone number. Try a nearby area, a simpler business type (for example, cafes), or remove the website/social filters.", true);
+        if (discoveredLeads.length) {
+          showStatus("lead-search-status", "Local search screened " + (data.screenedCount || 0) + " pages and found " + discoveredLeads.length + " qualified prospect(s). Review evidence and contact details before outreach.");
+        } else {
+          showStatus("lead-search-status", "Search completed, but no leads met the evidence threshold. " + (data.message || "Try a broader business type, nearby location or another service."), true);
+        }
+        setWednesdayCharacterState("happy");
       } catch (error) {
-        console.error("Live lead search error:", error);
-        showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
+        console.error("Local lead search error:", error);
+        const message = error.name === "TypeError" || /fetch|network/i.test(error.message)
+          ? "WEDNESDAY's local lead engine is not running. On Windows, open local-lead-engine\\start-wednesday-lead-engine.bat, keep its window open, then search again. The website cannot start your laptop's Python service automatically."
+          : error.message;
+        showStatus("lead-search-status", message, true);
+        setWednesdayCharacterState("error");
       } finally {
         searchButton.disabled = false;
       }
     });
   }
-
   if (clearButton) {
     clearButton.addEventListener("click", () => {
       ["lead-business-type", "lead-location", "lead-keywords"].forEach(id => { if ($(id)) $(id).value = ""; });
       discoveredLeads = [];
       renderDiscoveredLeads();
       showStatus("lead-search-status", "Search form cleared.");
+      setWednesdayCharacterState("idle");
     });
   }
-
   renderDiscoveredLeads();
 }
 
