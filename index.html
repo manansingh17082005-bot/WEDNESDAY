@@ -241,13 +241,13 @@
           <div>
             <span class="eyebrow">BUSINESS DEVELOPMENT</span>
             <h2>Lead Generation</h2>
-            <p class="muted">Find businesses that may need your services. Choose a service, location and sources to build a focused search.</p>
+            <p class="muted">Search public web pages with your local Windows lead engine. No paid search API or Tavily account is required.</p>
           </div>
         </div>
 
         <div class="panel">
           <div class="panel-head">
-            <div><span class="eyebrow">STEP 01</span><h3>What service are you offering?</h3><p class="muted">Choose one service per search for more relevant results. Run a separate search for each offer.</p></div>
+            <div><span class="eyebrow">STEP 01</span><h3>What service are you offering?</h3><p class="muted">Choose one service per search for more relevant results. Freelancer mode looks for explicit project requests; Agency mode looks for business-level requirements and visible service gaps.</p></div>
           </div>
 
           <div class="lead-service-grid">
@@ -260,6 +260,7 @@
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Data Analysis"><span>▥</span><b>Data Analysis</b><small>Reports, dashboards and insights</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Logo Design"><span>✎</span><b>Logo Design</b><small>Brand identity and creative design</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="Cafe &amp; Restaurant Marketing"><span>☕</span><b>Cafe &amp; Restaurant Marketing</b><small>Promotions, social content and local campaigns</small></label>
+            <label class="lead-choice"><input type="checkbox" name="lead-service" value="Digital Marketing"><span>↗</span><b>Digital Marketing</b><small>SEO, online visibility and lead-generation campaigns</small></label>
             <label class="lead-choice"><input type="checkbox" name="lead-service" value="CINE AI 2D Animation"><span>✦</span><b>CINE AI 2D Animation</b><small>Short illustrated promo videos for businesses</small></label>
           </div>
         </div>
@@ -279,7 +280,7 @@
             <label><input type="checkbox" name="lead-source" value="Justdial"> Justdial</label>
           </div>
 
-          <p class="note">Search availability depends on each platform's access rules and available APIs. WEDNESDAY will use permitted search methods and won't bypass logins, CAPTCHAs or platform restrictions.</p>
+          <p class="note">The local engine searches publicly indexed web pages. Social networks and map listings may restrict indexing; source checkboxes are preferences, not guaranteed coverage. WEDNESDAY will not bypass logins, CAPTCHAs or platform restrictions.</p>
         </div>
 
         <div class="panel">
@@ -314,7 +315,7 @@
           <div class="lead-filter-row">
             <label><input id="lead-filter-website" type="checkbox"> Require evidence of no or outdated website</label>
             <label><input id="lead-filter-social" type="checkbox"> Require evidence of weak or inactive social pages</label>
-            <div class="lead-required-filter"><span>✓</span><div><b>Public phone required</b><small>Every result must include a public phone number to check on WhatsApp.</small></div></div>
+            <div class="lead-required-filter"><span>✓</span><div><b>Public contact preferred</b><small>Phone, email or a public business website. WhatsApp is never assumed from a phone number.</small></div></div>
           </div>
 
           <div class="button-row">
