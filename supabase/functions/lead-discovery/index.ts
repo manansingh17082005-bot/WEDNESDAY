@@ -297,7 +297,7 @@ serve(async (request) => {
       seen.add(key);
 
       const combined = `${title} ${content} ${url}`;
-      const intermediaryPattern = /\\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\\b/i;
+      const intermediaryPattern = /\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\b/i;
       if (intermediaryPattern.test(combined)) continue;
       const phone = extractPublicPhone(combined, location);
       const email = extractPublicEmail(combined);
