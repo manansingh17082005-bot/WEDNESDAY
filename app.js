@@ -943,7 +943,7 @@ function initializeLeadGeneration() {
       }
 
       searchButton.disabled = true;
-      showStatus("lead-search-status", "Finding local businesses with a relevant opportunity and public phone number…");
+      showStatus("lead-search-status", "Finding businesses with relevant service opportunities; phone and WhatsApp are optional…");
 
       try {
         const { data: sessionData } = await supabaseClient.auth.getSession();
@@ -980,8 +980,8 @@ function initializeLeadGeneration() {
         window.WEDNESDAY_ACTIVITY?.log?.("lead_search");
         if (discoveredLeads.length) window.WEDNESDAY_ACTIVITY?.log?.("leads_found", { count: discoveredLeads.length });
         renderDiscoveredLeads();
-        if (discoveredLeads.length) showStatus("lead-search-status", `Found ${discoveredLeads.length} prospect(s) with a public phone number and relevant signal. Review each source and check the number in WhatsApp before outreach.`);
-        else showStatus("lead-search-status", "No prospects matched both a relevant signal and public phone number. Try a nearby area, a simpler business type (for example, cafes), or remove the website/social filters.", true);
+        if (discoveredLeads.length) showStatus("lead-search-status", `Found ${discoveredLeads.length} potential client(s) with relevant evidence. Contact details may be incomplete; review each source before outreach.`);
+        else showStatus("lead-search-status", "No prospects matched the current service and opportunity filters. Phone or WhatsApp is not required. Try broader business wording or a nearby area, and review the search terms.", true);
       } catch (error) {
         console.error("Live lead search error:", error);
         showStatus("lead-search-status", error.message || "Live lead search failed. Check the Supabase function setup.", true);
