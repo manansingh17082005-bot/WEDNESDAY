@@ -64,6 +64,84 @@ function extractPublicWhatsApp(text: string): string {
   return "";
 }
 
+type ContactEnrichment = {
+  phone: string;
+  email: string;
+  whatsappNumber: string;
+  contactPageUrl: string;
+  contactFormUrl: string;
+};
+
+function decodeHtml(value: string): string {
+  return value.replace(/&amp;/gi, "&").replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&#64;|&commat;/gi, "@").replace(/&#43;|&plus;/gi, "+")
+    .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+}
+
+function extractContactPageLinks(html: string, baseUrl: string): string[] {
+  const found: string[] = [];
+  const linkPattern = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = linkPattern.exec(html)) !== null) {
+    const href = match[1].trim();
+    const label = decodeHtml(match[2]).toLowerCase();
+    if (!/(contact|about|support|get in touch|enquir|connect)/i.test(href + " " + label)) continue;
+    try {
+      const absolute = new URL(href, baseUrl);
+      if ((absolute.protocol === "http:" || absolute.protocol === "https:") &&
+          absolute.hostname === new URL(baseUrl).hostname && !found.includes(absolute.toString())) {
+        found.push(absolute.toString());
+      }
+    } catch (_) {}
+    if (found.length >= 3) break;
+  }
+  return found;
+}
+
+async function enrichContactDetails(url: string, location: string): Promise<ContactEnrichment> {
+  const result: ContactEnrichment = { phone: "", email: "", whatsappNumber: "", contactPageUrl: "", contactFormUrl: "" };
+  let parsed: URL;
+  try { parsed = new URL(url); } catch (_) { return result; }
+  if (!/^https?:$/.test(parsed.protocol) ||
+      /(google|facebook|instagram|linkedin|justdial|youtube|wikipedia|yelp|tripadvisor|sulekha|indiamart)\./i.test(parsed.hostname)) return result;
+
+  const candidates = [parsed.toString()];
+  const seen = new Set<string>();
+  for (const pageUrl of candidates) {
+    if (seen.has(pageUrl)) continue;
+    seen.add(pageUrl);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      let response: Response;
+      try {
+        response = await fetch(pageUrl, {
+          signal: controller.signal,
+          headers: { "User-Agent": "WEDNESDAY-LeadResearch/1.0" },
+        });
+      } finally { clearTimeout(timeout); }
+      if (!response.ok) continue;
+      const html = (await response.text()).slice(0, 400000);
+      const pageText = decodeHtml(html);
+      result.email ||= extractPublicEmail(pageText);
+      result.phone ||= extractPublicPhone(pageText, location);
+      result.whatsappNumber ||= extractPublicWhatsApp(html);
+      const links = extractContactPageLinks(html, pageUrl);
+      if (links.length && !result.contactPageUrl) result.contactPageUrl = links[0];
+      for (const link of links.slice(0, 2)) if (!seen.has(link) && candidates.length < 4) candidates.push(link);
+      const formMatch = html.match(/<form\b[^>]*(?:action\s*=\s*["']([^"']*)["'])?[^>]*>/i);
+      if (formMatch && !result.contactFormUrl) {
+        try { result.contactFormUrl = new URL(formMatch[1] || pageUrl, pageUrl).toString(); }
+        catch (_) { result.contactFormUrl = pageUrl; }
+      }
+      if (result.email && (result.phone || result.whatsappNumber) && result.contactPageUrl) break;
+    } catch (_) {
+      // Some sites block automated requests; keep the original search result.
+    }
+  }
+  return result;
+}
+
 function cleanName(title: string, content = "", url = ""): string {
   const generic = /^(home|homepage|contact us|contact|about us|about|official website|welcome|login|sign in|menu|services|search results?)$/i;
   const candidates = [
@@ -299,9 +377,9 @@ serve(async (request) => {
       const combined = `${title} ${content} ${url}`;
       const intermediaryPattern = /\b(?:recruitment agency|staffing agency|job board|job portal|freelancer marketplace|lead selling|sell leads|lead broker|business broker|project broker|post a project|connect clients with freelancers|commission[- ]only)\b/i;
       if (intermediaryPattern.test(combined)) continue;
-      const phone = extractPublicPhone(combined, location);
-      const email = extractPublicEmail(combined);
-      const whatsappNumber = extractPublicWhatsApp(combined);
+      let phone = extractPublicPhone(combined, location);
+      let email = extractPublicEmail(combined);
+      let whatsappNumber = extractPublicWhatsApp(combined);
       const providerScore = Number(item.score) || 0;
       const qualification = scoreProspect(combined, service, phone, email, whatsappNumber, url, providerScore);
       screenedCount++;
@@ -309,6 +387,10 @@ serve(async (request) => {
       if (prioritiseNoWebsite && !qualification.websiteGapHits.length) continue;
       if (prioritiseWeakSocial && !qualification.weakSocialHits.length) continue;
       if (qualification.score < 30) continue;
+      const contactDetails = await enrichContactDetails(url, location);
+      phone ||= contactDetails.phone;
+      email ||= contactDetails.email;
+      whatsappNumber ||= contactDetails.whatsappNumber;
       let host = "";
       try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (_) { host = ""; }
 
@@ -323,13 +405,15 @@ serve(async (request) => {
         email,
         address: "",
         website: url,
+        contactPageUrl: contactDetails.contactPageUrl,
+        contactFormUrl: contactDetails.contactFormUrl,
         source: host ? `Tavily · ${host}` : "Tavily Web Search",
         snippet: content.slice(0, 1200),
         searchQuery: query,
         status: "Needs review",
         contactVerified: false,
-        publicContactFound: Boolean(phone || whatsappNumber || email),
-        contactMethod: phone || whatsappNumber ? "Phone/WhatsApp listed" : email ? "Email listed; phone not found" : "No contact extracted; check website",
+        publicContactFound: Boolean(phone || whatsappNumber || email || contactDetails.contactPageUrl || contactDetails.contactFormUrl),
+        contactMethod: whatsappNumber ? "WhatsApp listed" : phone ? "Phone listed" : email ? "Email listed" : contactDetails.contactFormUrl ? "Website contact form available" : contactDetails.contactPageUrl ? "Website contact page available" : "Website available; contact not extracted",
         leadMode: businessModel,
         openingDateVerified: false,
         priorityScore: qualification.score,
