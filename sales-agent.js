@@ -153,7 +153,8 @@
     });
     $("sa-queue").addEventListener("change",e=>{const id=e.target.dataset.stage;if(!id)return;const x=data.queue.find(x=>x.id===id);if(x){x.status=e.target.value;if(x.status==="Do not contact"){x.consent=false;x.scrubbed=false;x.nextStep="Suppress future outreach";}persist();syncLeadToCloud(x);}});
     $("sa-queue").addEventListener("click",e=>{const id=e.target.dataset.pick;if(!id)return;$("sa-selected").value=id;render();$("sa-call-status").textContent="Prospect selected. Review permission and script before any action.";});
-    $("sa-final-approval").addEventListener("change",e=>{if(e.target.checked){$("sa-call-status").textContent="Approval recorded for review only. Actual calling remains disabled until server verification.";}});
+    $("sa-final-approval").addEventListener("change",e=>{if(e.target.checked){$("sa-call-status").textContent="You approved the exact selected prospect and current script. Server-side checks still apply.";}render();});
+    $("sa-script-text").addEventListener("input",()=>{$("sa-final-approval").checked=false;render();});
   }
   document.addEventListener("DOMContentLoaded",mount);
 })();
