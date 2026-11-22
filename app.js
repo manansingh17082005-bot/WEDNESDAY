@@ -323,6 +323,7 @@ const pageTitles = {
   clients: "Client Management",
   outreach: "Outreach Studio",
   "business-hub": "Business Hub",
+  "sales-agent": "AI Sales Agent",
   messages: "Messages",
   personal: "Personal Space",
   coach: "AI Coach",
