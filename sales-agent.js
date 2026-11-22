@@ -70,6 +70,8 @@
     const db=window.WEDNESDAY_SUPABASE_CLIENT;if(!db||!x)return false;
     try{
       const auth=await db.auth.getUser();const user=auth&&auth.data&&auth.data.user;if(!user)return false;
+      const prior=await db.from("sales_agent_leads").select("opted_out").eq("id",x.id).maybeSingle();
+      if(prior.data&&prior.data.opted_out){x.status="Do not contact";x.consent=false;x.scrubbed=false;}
       const row={id:x.id,user_id:user.id,business_name:x.business,phone:String(x.phone||"").replace(/\s/g,""),service:x.service||"",reason:x.reason||"",consent_verified:!!x.consent,consent_purpose:x.consentPurpose||null,consent_source:x.consentSource||null,consent_date:x.consentDate||null,consent_evidence_ref:x.consentProof||null,consent_register_reference:x.consentRegisterRef||null,preference_scrubbed:!!x.scrubbed,preference_scrubbed_at:x.scrubbed?new Date().toISOString():null,dlt_scrub_reference:x.scrubRef||null,opted_out:x.status==="Do not contact",status:x.status||"Research"};
       const result=await db.from("sales_agent_leads").upsert(row,{onConflict:"id"});if(result.error)throw result.error;return true;
     }catch(error){console.warn("Sales agent cloud sync:",error.message);return false;}
@@ -115,7 +117,7 @@
       clients.forEach(x=>{if(addLead(x))n++;});
       persist();data.queue.forEach(syncLeadToCloud);$("sa-message").textContent=n+" CRM prospect(s) imported. Call permission was not assumed.";
     });
-    $("sa-selected").addEventListener("change",render);
+    $("sa-selected").addEventListener("change",()=>{$("sa-final-approval").checked=false;render();});
     $("sa-save-consent").addEventListener("click",()=>{
       const x=selected();if(!x){$("sa-message").textContent="Select a prospect first.";return;}
       x.consent=$("sa-consent").checked;x.consentSource=$("sa-consent-source").value;x.consentDate=$("sa-consent-date").value;x.consentProof=$("sa-consent-proof").value.trim();x.consentRegisterRef=$("sa-consent-register").value.trim();x.consentPurpose=$("sa-consent-purpose").value;x.scrubbed=$("sa-scrubbed").checked;x.scrubRef=$("sa-scrub-ref").value.trim();
