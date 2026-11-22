@@ -94,13 +94,9 @@
     if(data.queue.some(x=>x.id===current))$("sa-selected").value=current;
     $("sa-queue").innerHTML=data.queue.length?data.queue.map(x=>'<tr><td><b>'+esc(x.business)+'</b><small>'+esc(x.reason)+'</small></td><td>'+esc(x.phone||"Not supplied")+'</td><td>'+esc(x.service)+'</td><td>'+(x.consent&&x.consentSource&&x.consentDate&&x.consentProof?'<span class="sa-ok">Evidence recorded</span>':'<span class="sa-no">Not eligible</span>')+'</td><td><select data-stage="'+esc(x.id)+'">'+["Research","Permission requested","Eligible for review","Call approved","Contacted","Interested","Meeting","Not interested","Do not contact"].map(s=>'<option '+(x.status===s?'selected':'')+'>'+s+'</option>').join("")+'</select></td><td>'+esc(x.nextStep||"Review prospect")+'</td><td><button class="secondary-btn" data-pick="'+esc(x.id)+'">Select</button></td></tr>').join(""):'<tr><td colspan="7" class="empty">No prospects yet. Import your existing CRM leads or add a business.</td></tr>';
     $("sa-history").innerHTML=data.calls.length?data.calls.slice().reverse().map(c=>'<article><b>'+esc(c.business)+'</b><span>'+esc(c.when)+'</span><p>'+esc(c.outcome)+'</p></article>').join(""):'<p class="muted">No call activity yet.</p>';
-    $("sa-provider").value=data.settings.provider||"";
-    $("sa-from").value=data.settings.fromNumber||"";
-    $("sa-endpoint").value=data.settings.endpoint||"";
-    const pReady=Boolean(data.settings.provider&&data.settings.fromNumber&&data.settings.endpoint);
-    $("sa-provider-status").textContent=pReady?"Provider details saved. Server-side verification is still required before calling.":"No provider configured. Real calling is disabled.";
+    $("sa-provider-status").textContent="Exotel integration code is committed. Live calls remain server-locked until Supabase deployment, Exotel credentials, AgentStream and regulatory setup are verified.";
     const x=selected();
-    const eligible=Boolean(x&&x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&pReady);
+    const eligible=Boolean(x&&x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&x.consentRegisterRef&&x.scrubbed&&x.scrubRef&&x.status!=="Do not contact");
     const approved=$("sa-final-approval").checked;
     $("sa-call").disabled=!(eligible&&approved);
     $("sa-call").textContent=eligible?(approved?"Place this approved call":"Review and approve this exact call"):"Calling locked — consent / scrub evidence required";
