@@ -98,7 +98,8 @@
     $("sa-history").innerHTML=data.calls.length?data.calls.slice().reverse().map(c=>'<article><b>'+esc(c.business)+'</b><span>'+esc(c.when)+'</span><p>'+esc(c.outcome)+'</p></article>').join(""):'<p class="muted">No call activity yet.</p>';
     $("sa-provider-status").textContent="Exotel integration code is committed. Live calls remain server-locked until Supabase deployment, Exotel credentials, AgentStream and regulatory setup are verified.";
     const x=selected();
-    const eligible=Boolean(x&&x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&x.consentRegisterRef&&x.scrubbed&&x.scrubRef&&x.status!=="Do not contact");
+    const hasDisclosure=/\bAI assistant\b|\bartificial intelligence assistant\b/i.test($("sa-script-text").value||"");
+    const eligible=Boolean(x&&x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&x.consentRegisterRef&&x.scrubbed&&x.scrubRef&&x.status!=="Do not contact"&&hasDisclosure);
     const approved=$("sa-final-approval").checked;
     $("sa-call").disabled=!(eligible&&approved);
     $("sa-call").textContent=eligible?(approved?"Place this approved call":"Review and approve this exact call"):"Calling locked — consent / scrub evidence required";
@@ -122,7 +123,7 @@
       const x=selected();if(!x){$("sa-message").textContent="Select a prospect first.";return;}
       x.consent=$("sa-consent").checked;x.consentSource=$("sa-consent-source").value;x.consentDate=$("sa-consent-date").value;x.consentProof=$("sa-consent-proof").value.trim();x.consentRegisterRef=$("sa-consent-register").value.trim();x.consentPurpose=$("sa-consent-purpose").value;x.scrubbed=$("sa-scrubbed").checked;x.scrubRef=$("sa-scrub-ref").value.trim();
       if(x.consent&&(!x.consentSource||!x.consentDate||!x.consentProof||!x.consentRegisterRef||!x.scrubbed||!x.scrubRef)){x.consent=false;$("sa-message").textContent="Consent evidence and registered consent / preference-scrub references are required. A checkbox alone is not proof.";persist();return;}
-      x.status=x.consent?"Eligible for review":"Permission requested";
+      x.status=x.consent?"Eligible for review":"Permission requested";$("sa-final-approval").checked=false;
       persist();syncLeadToCloud(x);$("sa-message").textContent=x.consent?"Permission record synced where signed in. Server and provider compliance checks are still required.":"Consent not recorded.";
     });
     $("sa-script").addEventListener("click",()=>{$("sa-final-approval").checked=false;
