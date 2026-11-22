@@ -85,3 +85,59 @@ The AI Sales Agent adds a consent-first prospect queue to the existing WEDNESDAY
 - Keeps actual outbound calling disabled until a compliant telephony provider, verified caller ID and secure server-side call integration are configured.
 
 **Important:** This release is the front-end workflow and call-preparation layer, not a live autonomous dialler. No calls are placed by this version. Do not call arbitrary numbers merely because they appear in public listings. Before enabling commercial AI voice calls in India, verify current TRAI/DLT requirements, consent/preference checks, caller-ID and telemarketer obligations, calling-hour restrictions, provider terms and AI disclosure requirements. Provider credentials must be stored as Supabase server-side secrets, never in browser code.
+
+## Exotel AI calling integration (secure, approval-first)
+
+The Sales Agent now includes an Exotel outbound-call Edge Function, a token-protected call-status webhook, a private Supabase schema for consent evidence and call audit records, and a browser approval step. This is integration scaffolding, not a live dialler until deployment and voice-bot prerequisites are complete.
+
+### Exotel architecture
+
+1. The signed-in WEDNESDAY owner selects one prospect and reviews the exact script.
+2. The owner checks the per-call approval box and clicks Place this approved call.
+3. The browser invokes the exotel-outbound-call Supabase function; Exotel credentials never enter browser code.
+4. The Edge Function verifies the owner session, server-side enablement flags, saved consent evidence, consent purpose, preference-scrub reference, opt-out status, E.164 phone and AI disclosure.
+5. The function calls Exotel's India endpoint at https://api.in.exotel.com/v1/Accounts/{AccountSid}/Calls/connect using HTTP Basic Auth and the Voice AI parameters From, CallerId, StreamUrl and StreamType=bidirectional.
+6. Exotel sends call-status callbacks to exotel-status-webhook; a long random callback token protects the endpoint. Call attempts are logged in sales_agent_call_logs.
+
+### Deploy from Windows PowerShell
+
+From the WEDNESDAY repository folder:
+
+~~~powershell
+npx supabase login
+npx supabase link --project-ref bdidzrlljkkssamzahxz
+npx supabase db push
+~~~
+
+Set secrets in Supabase. Replace every placeholder locally. Never place secrets in config.js, GitHub Pages, browser localStorage or chat.
+
+~~~powershell
+npx supabase secrets set WEDNESDAY_OWNER_USER_ID="YOUR_AUTH_USER_UUID" WEDNESDAY_CALLING_ENABLED="false" EXOTEL_REGION="mumbai" EXOTEL_API_KEY="YOUR_EXOTEL_API_KEY" EXOTEL_API_TOKEN="YOUR_EXOTEL_API_TOKEN" EXOTEL_ACCOUNT_SID="YOUR_EXOTEL_ACCOUNT_SID" EXOTEL_CALLER_ID="YOUR_EXOTEL_APPROVED_EXOPHONE" EXOTEL_STREAM_URL="wss://YOUR_PUBLIC_AGENTSTREAM_HOST/stream" EXOTEL_WEBHOOK_SECRET="GENERATE_A_LONG_RANDOM_SECRET" TRAI_SENDER_REGISTRATION_REFERENCE="YOUR_VERIFIED_SENDER_REGISTRATION_REF" TRAI_A2P_DECLARATION_REFERENCE="YOUR_VERIFIED_A2P_DECLARATION_REF" TRAI_VOICE_RESOURCE_APPROVAL_REFERENCE="YOUR_VERIFIED_VOICE_RESOURCE_REFERENCE" TRAI_SCRUBBER_PROVIDER_REFERENCE="YOUR_VERIFIED_SCRUBBER_PROVIDER_REFERENCE"
+~~~
+
+Deploy the functions:
+
+~~~powershell
+npx supabase functions deploy exotel-outbound-call
+npx supabase functions deploy exotel-status-webhook --no-verify-jwt
+~~~
+
+### Mandatory go-live prerequisites
+
+- Complete the sender / principal-entity and telemarketer arrangements that apply to your business with the access provider.
+- Confirm the A2P calling declaration and the approved CLI/number resources with the originating access provider.
+- Use a compliant preference/consent scrubbing route; do not treat a public phone listing or a manually ticked box as permission.
+- Record verifiable consent for the specific promotional/sales-call purpose and the applicable Consent Register reference for each prospect.
+- Configure an Exotel AgentStream Voice AI WebSocket endpoint (wss://). The gateway that receives audio and speaks the approved script is a separate service and is not yet deployed by these files. A local Ollama server is not publicly reachable by Exotel without a secure, continuously running public WebSocket gateway.
+- Test only with your own number or a person who has explicitly agreed to a test call. Keep WEDNESDAY_CALLING_ENABLED=false until all prerequisites are verified.
+
+### Server secrets
+
+SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are also required by the Edge Functions. Supabase normally injects these standard project secrets, but verify them in the Edge Function secrets page. Never commit the service-role key.
+
+### Important limitations
+
+- This version places at most one explicitly approved call per button press. It has no batch dialling, campaign scheduler or automatic retry.
+- The consent/scrub fields are evidence records, not a direct connection to TRAI's DLT registers. The server also requires account-level compliance references, but these must be real and verified by the sender/provider.
+- The voice WebSocket gateway is a separate remaining build step; without it Exotel cannot connect the call to WEDNESDAY's AI voice.
+- The UI is not a legal compliance determination. Confirm current TCCCPR requirements and Exotel's onboarding conditions with your access provider and adviser before enabling commercial calls.
