@@ -1,0 +1,2 @@
+[functions.exotel-status-webhook]
+verify_jwt = false
