@@ -122,10 +122,10 @@
     $("sa-selected").addEventListener("change",render);
     $("sa-save-consent").addEventListener("click",()=>{
       const x=selected();if(!x){$("sa-message").textContent="Select a prospect first.";return;}
-      x.consent=$("sa-consent").checked;x.consentSource=$("sa-consent-source").value;x.consentDate=$("sa-consent-date").value;x.consentProof=$("sa-consent-proof").value.trim();
-      if(x.consent&&(!x.consentSource||!x.consentDate||!x.consentProof)){x.consent=false;$("sa-message").textContent="Permission evidence is incomplete. Add the source, date and evidence reference.";persist();return;}
+      x.consent=$("sa-consent").checked;x.consentSource=$("sa-consent-source").value;x.consentDate=$("sa-consent-date").value;x.consentProof=$("sa-consent-proof").value.trim();x.consentRegisterRef=$("sa-consent-register").value.trim();x.consentPurpose=$("sa-consent-purpose").value;x.scrubbed=$("sa-scrubbed").checked;x.scrubRef=$("sa-scrub-ref").value.trim();
+      if(x.consent&&(!x.consentSource||!x.consentDate||!x.consentProof||!x.consentRegisterRef||!x.scrubbed||!x.scrubRef)){x.consent=false;$("sa-message").textContent="Consent evidence and registered consent / preference-scrub references are required. A checkbox alone is not proof.";persist();return;}
       x.status=x.consent?"Eligible for review":"Permission requested";
-      persist();$("sa-message").textContent=x.consent?"Permission record saved. Verify all applicable calling rules before any call.":"Consent not recorded.";
+      persist();syncLeadToCloud(x);$("sa-message").textContent=x.consent?"Permission record synced where signed in. Server and provider compliance checks are still required.":"Consent not recorded.";
     });
     $("sa-script").addEventListener("click",()=>{
       const x=selected();if(!x){$("sa-call-status").textContent="Select a prospect first.";return;}
@@ -138,11 +138,21 @@
       $("sa-script-text").value=[opener,intro,purpose,ask,close].join("\n\n");
       $("sa-call-status").textContent="Draft created for review only. No call has been placed.";
     });
-    $("sa-save-provider").addEventListener("click",()=>{
-      data.settings={provider:$("sa-provider").value,fromNumber:$("sa-from").value.trim(),endpoint:$("sa-endpoint").value.trim()};
-      persist();$("sa-provider-status").textContent="Saved locally. No provider connection has been tested; secrets must remain server-side.";
+    $("sa-call").addEventListener("click",async()=>{
+      const x=selected(),script=$("sa-script-text").value.trim();
+      if(!x||!$("sa-final-approval").checked){$("sa-call-status").textContent="Select a prospect and approve this exact call first.";return;}
+      if(!window.WEDNESDAY_SUPABASE_CLIENT){$("sa-call-status").textContent="Secure cloud connection is unavailable. Sign in and reconnect Supabase.";return;}
+      if(!/\bAI assistant\b|\bartificial intelligence assistant\b/i.test(script)){$("sa-call-status").textContent="The script must clearly identify WEDNESDAY as an AI assistant. Add that disclosure and review again.";return;}
+      const button=$("sa-call");button.disabled=true;button.textContent="Requesting Exotel call…";$("sa-call-status").textContent="Submitting one approved call to the secure server. Do not close this page.";
+      try{
+        const synced=await syncLeadToCloud(x);
+        if(!synced)throw new Error("Prospect / permission record did not sync to secure CRM.");
+        const result=await window.WEDNESDAY_SUPABASE_CLIENT.functions.invoke("exotel-outbound-call",{body:{lead_id:x.id,script}});
+        if(result.error)throw result.error;
+        const call=result.data||{};data.calls.push({id:call.audit_id||uid(),business:x.business,when:new Date().toLocaleString(),outcome:"Exotel: "+(call.status||"request accepted")+" · "+(call.call_sid||"no call ID")});x.status="Contacted";$("sa-final-approval").checked=false;persist();
+        $("sa-call-status").textContent=call.success?"Exotel accepted this single call request. Call ID: "+call.call_sid:"Server response received; verify call status in activity.";
+      }catch(error){$("sa-call-status").textContent="Call not confirmed: "+(error.message||String(error))+". No retry was made automatically.";}finally{button.textContent="Place this approved call";render();}
     });
-    $("sa-call").addEventListener("click",()=>{$("sa-call-status").textContent="Calling is not enabled in this build. A verified server-side telephony integration and compliance checks must be completed first.";});
     $("sa-queue").addEventListener("change",e=>{const id=e.target.dataset.stage;if(!id)return;const x=data.queue.find(x=>x.id===id);if(x){x.status=e.target.value;if(x.status==="Do not contact"){x.consent=false;x.nextStep="Suppress future outreach";}persist();}});
     $("sa-queue").addEventListener("click",e=>{const id=e.target.dataset.pick;if(!id)return;$("sa-selected").value=id;render();$("sa-call-status").textContent="Prospect selected. Review permission and script before any action.";});
     $("sa-final-approval").addEventListener("change",e=>{if(e.target.checked){$("sa-call-status").textContent="Approval recorded for review only. Actual calling remains disabled until server verification.";}});
