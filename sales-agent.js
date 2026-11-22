@@ -76,7 +76,7 @@
   }
   function selected(){return data.queue.find(x=>x.id===$("sa-selected")?.value)||null;}
   function addLead(lead){
-    const phone=String(lead.phone||lead.contact||"").trim().replace(/^(?!\\+)([6-9]\\d{9})$/, "+91$1");
+    const phone=String(lead.phone||lead.contact||"").trim().replace(/^(?!\+)([6-9]\d{9})$/, "+91$1");
     if(!lead.name&&!lead.company) return false;
     const duplicate=data.queue.some(x=>phone && x.phone.replace(/\D/g,"")===phone.replace(/\D/g,""));
     if(duplicate)return false;
@@ -149,7 +149,7 @@
         $("sa-call-status").textContent=call.success?"Exotel accepted this single call request. Call ID: "+call.call_sid:"Server response received; verify call status in activity.";
       }catch(error){$("sa-call-status").textContent="Call not confirmed: "+(error.message||String(error))+". No retry was made automatically.";}finally{button.textContent="Place this approved call";render();}
     });
-    $("sa-queue").addEventListener("change",e=>{const id=e.target.dataset.stage;if(!id)return;const x=data.queue.find(x=>x.id===id);if(x){x.status=e.target.value;if(x.status==="Do not contact"){x.consent=false;x.nextStep="Suppress future outreach";}persist();}});
+    $("sa-queue").addEventListener("change",e=>{const id=e.target.dataset.stage;if(!id)return;const x=data.queue.find(x=>x.id===id);if(x){x.status=e.target.value;if(x.status==="Do not contact"){x.consent=false;x.scrubbed=false;x.nextStep="Suppress future outreach";}persist();syncLeadToCloud(x);}});
     $("sa-queue").addEventListener("click",e=>{const id=e.target.dataset.pick;if(!id)return;$("sa-selected").value=id;render();$("sa-call-status").textContent="Prospect selected. Review permission and script before any action.";});
     $("sa-final-approval").addEventListener("change",e=>{if(e.target.checked){$("sa-call-status").textContent="Approval recorded for review only. Actual calling remains disabled until server verification.";}});
   }
