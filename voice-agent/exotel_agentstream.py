@@ -237,11 +237,10 @@ async def stream(ws: WebSocket) -> None:
         opening = "\n\n".join(paragraphs[:2]) if paragraphs else approved_script[:700]
         if not opening:
             opening = "Hello, I'm WEDNESDAY, an AI assistant calling on behalf of Manan Singh's creative agency. Is now a convenient time to speak?"
-        await speak(ws, stream_sid, opening)
-
         queue: asyncio.Queue[bytes] = asyncio.Queue()
         stop = asyncio.Event()
         receiver = asyncio.create_task(receive_turns(ws, queue, stop))
+        await speak(ws, stream_sid, opening)
         history: list[dict[str, str]] = []
         while not stop.is_set():
             try:
