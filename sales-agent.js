@@ -20,6 +20,7 @@
     item.className="nav-item"; item.dataset.page="sales-agent";
     item.innerHTML="<span>☎</span> AI Sales Agent";
     nav.insertBefore(item, nav.querySelector('[data-page="business-hub"]'));
+    item.addEventListener("click", () => { if (typeof window.showPage === "function") window.showPage("sales-agent"); else { document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === "page-sales-agent")); document.querySelectorAll("[data-page]").forEach(b => b.classList.toggle("active", b === item)); const title = $("page-title"); if (title) title.textContent = "AI Sales Agent"; } });
     const page=document.createElement("section");
     page.className="page"; page.id="page-sales-agent";
     page.innerHTML=`
