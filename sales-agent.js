@@ -67,17 +67,17 @@
   function persist(){save(KEY,data);render();}
   function selected(){return data.queue.find(x=>x.id===$("sa-selected")?.value)||null;}
   function addLead(lead){
-    const phone=String(lead.phone||lead.contact||"").trim();
+    const phone=String(lead.phone||lead.contact||"").trim().replace(/^(?!\\+)([6-9]\\d{9})$/, "+91$1");
     if(!lead.name&&!lead.company) return false;
     const duplicate=data.queue.some(x=>phone && x.phone.replace(/\D/g,"")===phone.replace(/\D/g,""));
     if(duplicate)return false;
-    data.queue.unshift({id:uid(),business:lead.company||lead.name||"Business",phone,service:lead.service||"Social Media Management",reason:lead.notes||lead.source||"Imported from WEDNESDAY CRM",consent:false,consentSource:"",consentDate:"",consentProof:"",status:"Research",createdAt:new Date().toISOString()});
+    data.queue.unshift({id:uid(),business:lead.company||lead.name||"Business",phone,service:lead.service||"Social Media Management",reason:lead.notes||lead.source||"Imported from WEDNESDAY CRM",consent:false,consentSource:"",consentDate:"",consentProof:"",consentRegisterRef:"",consentPurpose:"Sales / promotional calls",scrubbed:false,scrubRef:"",status:"Research",createdAt:new Date().toISOString()});
     return true;
   }
   function render(){
     if(!$("sa-queue"))return;
     $("sa-total").textContent=data.queue.length;
-    $("sa-eligible").textContent=data.queue.filter(x=>x.consent&&x.consentSource&&x.consentDate&&x.consentProof).length;
+    $("sa-eligible").textContent=data.queue.filter(x=>x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&x.consentRegisterRef&&x.scrubbed&&x.scrubRef).length;
     $("sa-calls").textContent=data.calls.length;
     $("sa-interested").textContent=data.queue.filter(x=>x.status==="Interested").length;
     const current=$("sa-selected").value;
@@ -92,9 +92,10 @@
     $("sa-provider-status").textContent=pReady?"Provider details saved. Server-side verification is still required before calling.":"No provider configured. Real calling is disabled.";
     const x=selected();
     const eligible=Boolean(x&&x.consent&&x.consentSource&&x.consentDate&&x.consentProof&&pReady);
-    $("sa-call").disabled=true;
-    $("sa-call").textContent=eligible?"Call integration pending server verification":"Calling unavailable — setup required";
-    if(x){$("sa-consent").checked=!!x.consent;$("sa-consent-source").value=x.consentSource||"";$("sa-consent-date").value=x.consentDate||"";$("sa-consent-proof").value=x.consentProof||"";}
+    const approved=$("sa-final-approval").checked;
+    $("sa-call").disabled=!(eligible&&approved);
+    $("sa-call").textContent=eligible?(approved?"Place this approved call":"Review and approve this exact call"):"Calling locked — consent / scrub evidence required";
+    if(x){$("sa-consent").checked=!!x.consent;$("sa-consent-source").value=x.consentSource||"";$("sa-consent-date").value=x.consentDate||"";$("sa-consent-proof").value=x.consentProof||"";$("sa-consent-register").value=x.consentRegisterRef||"";$("sa-consent-purpose").value=x.consentPurpose||"Sales / promotional calls";$("sa-scrubbed").checked=!!x.scrubbed;$("sa-scrub-ref").value=x.scrubRef||"";}
   }
   function bind(){
     $("sa-add").addEventListener("click",()=>{
