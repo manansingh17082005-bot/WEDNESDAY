@@ -1,2 +1,5 @@
 [functions.exotel-status-webhook]
 verify_jwt = false
+
+[functions.exotel-agent-context]
+verify_jwt = false
