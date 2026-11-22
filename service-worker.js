@@ -11,6 +11,7 @@ const ASSETS = [
   "./companions.css",
   "./companions.js",
   "./app.js",
+  "./sales-agent.js",
   "./voice.js",
   "./config.js",
   "./manifest.webmanifest",
