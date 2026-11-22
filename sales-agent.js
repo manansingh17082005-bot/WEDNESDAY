@@ -125,7 +125,7 @@
       x.status=x.consent?"Eligible for review":"Permission requested";
       persist();syncLeadToCloud(x);$("sa-message").textContent=x.consent?"Permission record synced where signed in. Server and provider compliance checks are still required.":"Consent not recorded.";
     });
-    $("sa-script").addEventListener("click",()=>{
+    $("sa-script").addEventListener("click",()=>{$("sa-final-approval").checked=false;
       const x=selected();if(!x){$("sa-call-status").textContent="Select a prospect first.";return;}
       const lang=$("sa-language").value, objective=$("sa-objective").value;
       const opener=lang==="Hindi"?"Namaste, main WEDNESDAY hoon, ek AI assistant, aur main "+( "Manan Singh ki creative agency" )+" ki taraf se call kar raha/rahi hoon.":"Hello, I'm WEDNESDAY, an AI assistant calling on behalf of Manan Singh's creative agency.";
