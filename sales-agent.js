@@ -62,9 +62,18 @@
     $("main").insertBefore(page, $("main").querySelector("footer"));
     bind();
     render();
+    if(window.WEDNESDAY_SUPABASE_CLIENT)window.WEDNESDAY_SUPABASE_CLIENT.auth.getUser().then(()=>data.queue.forEach(syncLeadToCloud)).catch(()=>{});
   }
 
   function persist(){save(KEY,data);render();}
+  async function syncLeadToCloud(x){
+    const db=window.WEDNESDAY_SUPABASE_CLIENT;if(!db||!x)return false;
+    try{
+      const auth=await db.auth.getUser();const user=auth&&auth.data&&auth.data.user;if(!user)return false;
+      const row={id:x.id,user_id:user.id,business_name:x.business,phone:String(x.phone||"").replace(/\s/g,""),service:x.service||"",reason:x.reason||"",consent_verified:!!x.consent,consent_purpose:x.consentPurpose||null,consent_source:x.consentSource||null,consent_date:x.consentDate||null,consent_evidence_ref:x.consentProof||null,consent_register_reference:x.consentRegisterRef||null,preference_scrubbed:!!x.scrubbed,preference_scrubbed_at:x.scrubbed?new Date().toISOString():null,dlt_scrub_reference:x.scrubRef||null,opted_out:x.status==="Do not contact",status:x.status||"Research"};
+      const result=await db.from("sales_agent_leads").upsert(row,{onConflict:"id"});if(result.error)throw result.error;return true;
+    }catch(error){console.warn("Sales agent cloud sync:",error.message);return false;}
+  }
   function selected(){return data.queue.find(x=>x.id===$("sa-selected")?.value)||null;}
   function addLead(lead){
     const phone=String(lead.phone||lead.contact||"").trim().replace(/^(?!\\+)([6-9]\\d{9})$/, "+91$1");
@@ -102,13 +111,13 @@
       const business=$("sa-business").value.trim(),phone=$("sa-phone").value.trim();
       if(!business){$("sa-message").textContent="Enter a business name.";return;}
       addLead({name:business,phone,service:$("sa-service").value,notes:$("sa-reason").value.trim()});
-      persist();$("sa-message").textContent="Prospect saved. This does not grant permission to call.";
+      persist();syncLeadToCloud(data.queue[0]);$("sa-message").textContent="Prospect saved. This does not grant permission to call.";
       ["sa-business","sa-phone","sa-reason"].forEach(id=>$(id).value="");
     });
     $("sa-import").addEventListener("click",()=>{
       const clients=getClients();let n=0;
       clients.forEach(x=>{if(addLead(x))n++;});
-      persist();$("sa-message").textContent=n+" CRM prospect(s) imported. Call permission was not assumed.";
+      persist();data.queue.forEach(syncLeadToCloud);$("sa-message").textContent=n+" CRM prospect(s) imported. Call permission was not assumed.";
     });
     $("sa-selected").addEventListener("change",render);
     $("sa-save-consent").addEventListener("click",()=>{
