@@ -73,3 +73,15 @@ Open `http://localhost:8000`.
 ## Deployment
 
 The frontend is published through GitHub Pages. Supabase provides authentication and the server-side lead-search function. Business Hub and CRM sync to Supabase when the migration has been run and the owner is signed in; local storage remains the offline fallback. Tasks and business preference settings remain local-only.
+
+## AI Sales Agent (new workspace module)
+
+The AI Sales Agent adds a consent-first prospect queue to the existing WEDNESDAY lead generation and CRM workflow.
+
+- Imports existing CRM prospects into a separate local call queue; importing never implies consent.
+- Records explicit permission source, date and evidence reference before marking a prospect eligible for review.
+- Generates a transparent AI caller script that identifies itself as an AI assistant and explains whom it represents.
+- Tracks prospect status and call activity locally in the browser.
+- Keeps actual outbound calling disabled until a compliant telephony provider, verified caller ID and secure server-side call integration are configured.
+
+**Important:** This release is the front-end workflow and call-preparation layer, not a live autonomous dialler. No calls are placed by this version. Do not call arbitrary numbers merely because they appear in public listings. Before enabling commercial AI voice calls in India, verify current TRAI/DLT requirements, consent/preference checks, caller-ID and telemarketer obligations, calling-hour restrictions, provider terms and AI disclosure requirements. Provider credentials must be stored as Supabase server-side secrets, never in browser code.
