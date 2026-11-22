@@ -141,3 +141,58 @@ SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are also required 
 - The consent/scrub fields are evidence records, not a direct connection to TRAI's DLT registers. The server also requires account-level compliance references, but these must be real and verified by the sender/provider.
 - The voice WebSocket gateway is a separate remaining build step; without it Exotel cannot connect the call to WEDNESDAY's AI voice.
 - The UI is not a legal compliance determination. Confirm current TCCCPR requirements and Exotel's onboarding conditions with your access provider and adviser before enabling commercial calls.
+
+
+### Local WEDNESDAY voice gateway (AgentStream)
+
+The Exotel call API is only the telephony connection. The conversational voice bot runs on the Windows laptop and is exposed through a protected WebSocket tunnel. It uses the existing local Ollama model, Faster-Whisper for speech recognition and Windows SAPI via pyttsx3 for offline speech synthesis. Call transcripts are processed in memory and are not saved by this gateway.
+
+Deploy the additional context/opt-out functions:
+
+~~~powershell
+npx supabase functions deploy exotel-agent-context --no-verify-jwt
+npx supabase functions deploy exotel-agent-optout --no-verify-jwt
+~~~
+
+Set these additional Supabase secrets. Use the same long random context secret locally and in Supabase:
+
+~~~powershell
+npx supabase secrets set EXOTEL_AGENT_CONTEXT_SECRET="GENERATE_ANOTHER_LONG_RANDOM_SECRET"
+~~~
+
+On the Windows laptop, open PowerShell in the repository:
+
+~~~powershell
+cd voice-agent
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:OLLAMA_URL="http://localhost:11434/api/chat"
+$env:OLLAMA_MODEL="llama3.2"
+$env:EXOTEL_AGENT_CONTEXT_URL="https://bdidzrlljkkssamzahxz.supabase.co/functions/v1/exotel-agent-context"
+$env:EXOTEL_AGENT_OPTOUT_URL="https://bdidzrlljkkssamzahxz.supabase.co/functions/v1/exotel-agent-optout"
+$env:EXOTEL_AGENT_CONTEXT_SECRET="SAME_VALUE_AS_SUPABASE_SECRET"
+$env:WEDNESDAY_AGENTSTREAM_TOKEN="GENERATE_A_DIFFERENT_LONG_RANDOM_TOKEN"
+uvicorn exotel_agentstream:app --host 127.0.0.1 --port 8001
+~~~
+
+In a second PowerShell window, install Cloudflare Tunnel if needed and start a temporary HTTPS/WSS tunnel:
+
+~~~powershell
+winget install --id Cloudflare.cloudflared
+cloudflared tunnel --url http://localhost:8001
+~~~
+
+Cloudflare prints a temporary hostname ending in trycloudflare.com. Build the Exotel Stream URL using that hostname and the same AgentStream token:
+
+~~~text
+wss://YOUR-TEMP-HOST.trycloudflare.com/stream?token=YOUR_AGENTSTREAM_TOKEN&sample-rate=16000
+~~~
+
+Set that complete URL as the Supabase secret EXOTEL_STREAM_URL. A Quick Tunnel hostname changes when the tunnel is restarted, so update the secret whenever it changes. Keep both PowerShell windows running during a test call. Check http://127.0.0.1:8001/health before testing.
+
+The context function returns only the approved script and public business context for the call ID. The opt-out function marks the lead Do not contact when the recipient explicitly asks not to be called again. The WebSocket route requires its own random token. Do not expose the service-role key or any provider credentials to this local service.
+
+### Important test limits
+
+Start with a test recipient who has explicitly agreed to receive the test call. Do not switch WEDNESDAY_CALLING_ENABLED to true until Exotel has enabled the approved voice resources, the sender's A2P declaration and required registration/scrubbing arrangements are confirmed, the WebSocket service is reachable, and the call has been reviewed. A successful API response means Exotel accepted a call request; it does not prove the recipient answered or that the voice conversation completed.
