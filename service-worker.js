@@ -1,4 +1,4 @@
-const CACHE = "wednesday-command-center-v6";
+const CACHE = "wednesday-command-center-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./dashboard-studio.css",
   "./dashboard-studio.js",
   "./business-hub.css",
+  "./sales-agent.css",
   "./wednesday-cartoon-theme.css",
   "./companions.css",
   "./companions.js",
