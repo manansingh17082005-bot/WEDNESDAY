@@ -59,7 +59,7 @@ TRUTH AND SAFETY RULES
 /* ================= GLOBAL STATE ================= */
 
 const HISTORY_STORAGE_KEY = "wednesday_conversation_history";
-const MAX_HISTORY_MESSAGES = 24;
+const MAX_HISTORY_MESSAGES = 16;
 const conversationHistory = loadData(HISTORY_STORAGE_KEY, []);
 if (!Array.isArray(conversationHistory)) conversationHistory.length = 0;
 
@@ -197,7 +197,8 @@ async function askWednesday(message, onText = () => {}, signal) {
       keep_alive: "10m",
       options: {
         temperature: 0.5,
-        num_predict: 384
+        num_predict: 256,
+        num_ctx: 2048
       }
     })
   });
@@ -476,6 +477,12 @@ function initializeTasks() {
 
 /* ================= CHAT ASSISTANT ================= */
 
+function scrollChatToBottom() {
+  const body = $("chat-body");
+  if (!body) return;
+  body.scrollTop = body.scrollHeight;
+}
+
 function addChatMessage(text, type = "assistant") {
   const body = $("chat-body");
   if (!body) return null;
@@ -489,7 +496,7 @@ function addChatMessage(text, type = "assistant") {
   bubble.textContent = text;
 
   body.appendChild(bubble);
-  body.scrollTop = body.scrollHeight;
+  scrollChatToBottom();
 
   return bubble;
 }
@@ -547,6 +554,7 @@ function initializeChat() {
           toolFirstToken = false;
         }
         if (replyBubble) replyBubble.textContent = fullText;
+        scrollChatToBottom();
         window.WEDNESDAY_SPEAK_STREAM_PUSH?.(fullText);
       });
 
