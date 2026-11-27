@@ -96,3 +96,35 @@
 #page-lead-generation .lead-table td:nth-child(9) .secondary-btn{width:100%;margin-top:4px}
 #page-lead-generation .lead-table a{overflow-wrap:anywhere}
 @media(max-width:650px){#page-lead-generation .lead-table tbody{grid-template-columns:1fr}.lead-results-toolbar{align-items:flex-start}}
+
+/* WEDNESDAY VIBRANT THEME + CHAT SCROLL PATCH */
+:root{
+  --bg:#07131f;--panel:#102235;--panel2:#16324b;--line:#244762;
+  --text:#f5faff;--muted:#a5c2d8;--purple:#b58cff;--blue:#55bfff;
+  --green:#59e1b3;--amber:#ffbd69;--danger:#ff7e92
+}
+body{
+  background:radial-gradient(ellipse at 12% 0%,#193b59 0,transparent 42%),
+             radial-gradient(ellipse at 90% 12%,#32224d 0,transparent 36%),var(--bg)
+}
+.sidebar{background:linear-gradient(180deg,#0d2034,#101725 82%)}
+.brand-mark,.orb-mini{background:linear-gradient(135deg,#ffbe62,#ff7b8e 48%,#9278ff);box-shadow:0 0 20px #ff9d5a30}
+.nav-item span,.eyebrow,.text-btn{color:#70d6ff}
+.nav-item:hover,.nav-item.active{background:linear-gradient(100deg,#173a57,#30284b);box-shadow:inset 0 0 0 1px #4aa9dc35}
+.welcome-panel{background:radial-gradient(circle at 80% 30%,#315e8b 0,#243a60 32%,#172b43 70%,#122238 100%);border-color:#3973a4;box-shadow:0 14px 40px #06111c50}
+.primary-btn{background:linear-gradient(110deg,#5dd8ff,#7b9dff 52%,#ba8cff);color:#071525}
+.primary-btn:hover{filter:brightness(1.1)}
+.panel,.stat-card,.integration-card{box-shadow:0 8px 25px #030b1450}
+.chat-panel{display:flex;flex-direction:column;max-height:78vh;min-height:420px}
+.chat-body{flex:1;min-height:0;max-height:calc(78vh - 125px);overflow-y:auto;overscroll-behavior:contain;scroll-behavior:auto;padding:20px;scrollbar-width:thin;scrollbar-color:#4388ba #122238}
+.chat-body::-webkit-scrollbar{width:9px}
+.chat-body::-webkit-scrollbar-track{background:#122238;border-radius:10px}
+.chat-body::-webkit-scrollbar-thumb{background:linear-gradient(#54c7ff,#a87dff);border-radius:10px}
+.assistant-bubble{background:linear-gradient(135deg,#19334c,#222b48);border-color:#345a7d}
+.user-bubble{background:linear-gradient(135deg,#264b70,#4a3670);border:1px solid #547cb4}
+.chat-compose{position:sticky;bottom:0;background:var(--panel);z-index:3}
+@media(max-width:700px){
+  .chat-panel{max-height:76vh;min-height:390px}
+  .chat-body{max-height:calc(76vh - 125px);padding:15px}
+  .chat-compose{position:sticky;bottom:0}
+}
